@@ -37,7 +37,7 @@ const tokenize = (str) => str == STRING_EMPTY ? '=' : btoa(str);
  */
 const detokenize = (encodedStr) => encodedStr == '=' ? STRING_EMPTY : atob(encodedStr);
 
-function deepLog(obj) {
+function deepLog(obj) { // not mine but very usefull
     const seen = new WeakSet();
     const recursiveDump = (value, indent = 0) => {
         if (value === null) return "null";
@@ -61,13 +61,13 @@ function deepLog(obj) {
 
 class LineData {
     constructor(str) {
-        /** @type {Call[]} */ this.Calls;
+        /** @type {Call[]} */ this.calls;
 
         const stringRegex = /(["'])(?:(?=(\\?))\2.)*?\1/g
 
         let withTokenizedStrings = str;
         str.match(stringRegex).forEach(s => withTokenizedStrings = withTokenizedStrings.replace(s, tokenize(s.slice(1, -1))));
-        this.Calls = withTokenizedStrings.slice(0, -1) // no need for the ";".
+        this.calls = withTokenizedStrings.slice(0, -1) // no need for the ";".
             .split('|')
             .map(call => new Call(call.trim()));
     }
@@ -77,26 +77,26 @@ class LineData {
  */
 class Call {
     constructor(str) {
-        /** @type {number | null} The memory pointer.*/ this.Pointer;
-        /** @type {string} The namespace this {@link Call} calls to.*/ this.Namespace;
-        /** @type {string} */ this.Name;
-        /** @type {!Object[]} The call arguments. May be an empty array if no arguments are given. */ this.Args;
+        /** @type {number | null} The memory pointer.*/ this.pointer;
+        /** @type {string} The namespace this {@link Call} calls to.*/ this.namespace;
+        /** @type {string} */ this.name;
+        /** @type {!Object[]} The call arguments. May be an empty array if no arguments are given. */ this.args;
 
         const pointerRegex = /\*+$/; // only supports "simple" pointers.
 
         const pointerMatch = str.match(pointerRegex);
-        this.Pointer = Number(pointerMatch ? pointerMatch[0].length : -1);
+        this.pointer = Number(pointerMatch ? pointerMatch[0].length : -1);
 
-        const [fullFunc, argsStr] = str.replace(this.Pointer, STRING_EMPTY).split('(', 2);
-        [this.Namespace, this.Name] = fullFunc.split('::', 2);
+        const [fullFunc, argsStr] = str.replace(this.pointer, STRING_EMPTY).split('(', 2);
+        [this.namespace, this.name] = fullFunc.split('::', 2);
 
-        this.Args = argsStr.slice(0, -1) // remove trailing ")".
+        this.args = argsStr.slice(0, -1) // remove trailing ")".
             .splitSafe(',') // returns [] if delimiter is not found.
             .map(arg => dynamiccast(arg.trim()));
     }
 }
 const line = new LineData('ext::writel("wdadadad", 1*716+93)*|ext::writel();');
-line.Calls.forEach(c =>
+line.calls.forEach(c =>
     deepLog(c)
 );
-console.log(detokenize('=') + ' aa');
+// console.log(detokenize('=') + ' aa');
