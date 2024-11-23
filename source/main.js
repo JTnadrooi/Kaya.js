@@ -8,7 +8,7 @@ const STRING_EMPTY = '';
  * @returns {string[]} An array of splitted strings, or an empty array if the delimiter is not found.
  */
 String.prototype.splitSafe = function (delimiter) {
-    return this.indexOf(delimiter) === -1 ? [] : this.split(delimiter);
+    return this.indexOf(delimiter) === -1 ? [] : this.split(delimiter); // "this" doesnt work in arrow functions.
 };
 /**
  * @returns {string|boolean|number} string if surrounded by double quotiationmarks, bool if True or False and number if its a number and not surrounded by quotation marks.
@@ -16,7 +16,9 @@ String.prototype.splitSafe = function (delimiter) {
 function dynamiccast(str) {
     const stringRegex = /^"(.*)"$/;
 
-    if (str.match(stringRegex)) return str.replace(stringRegex, '$1');
+    // if (str.match(stringRegex)) return str.replace(stringRegex, '$1');
+    if (str.match(stringRegex)) return console.log("uh");
+    else if (str.endsWith("=")) return detokenize(str);
     else if (str.toLowerCase() === 'true') return true;
     else if (str.toLowerCase() === 'false') return false;
 
@@ -24,6 +26,8 @@ function dynamiccast(str) {
     if (temp !== 'ERROR') return temp;
     return +str; // NaN if fails.
 };
+const tokenize = (str) => btoa(str);
+const detokenize = (encodedStr) => atob(encodedStr);
 
 function deepLog(obj) {
     const seen = new WeakSet();
@@ -51,7 +55,11 @@ class LineData {
     constructor(str) {
         /** @type {Call[]} */ this.Calls;
 
-        this.Calls = str.slice(0, -1) // no need for the ";".
+        const stringRegex = /(["'])(?:(?=(\\?))\2.)*?\1/g
+
+        let withTokenizedStrings = str;
+        str.match(stringRegex).forEach(s => withTokenizedStrings = withTokenizedStrings.replace(s, tokenize(s.slice(1, -1))));
+        this.Calls = withTokenizedStrings.slice(0, -1) // no need for the ";".
             .split('|')
             .map(call => new Call(call.trim()));
     }
@@ -74,17 +82,12 @@ class Call {
         const [fullFunc, argsStr] = str.replace(this.Pointer, STRING_EMPTY).split('(', 2);
         [this.Namespace, this.Name] = fullFunc.split('::', 2);
 
-        const unCastedArgs = argsStr.slice(0, -1) // remove trailing ")".
+        this.Args = argsStr.slice(0, -1) // remove trailing ")".
             .splitSafe(',') // returns [] if delimiter is not found.
             .map(arg => dynamiccast(arg.trim()));
-        this.Args = unCastedArgs;
     }
 }
-const line = new LineData('ext::writel("hello", 1*716+93)*|ext::writel();');
+const line = new LineData('ext::writel("hel()**|lo", 1*716+93)*|ext::writel();');
 line.Calls.forEach(c =>
     deepLog(c)
 );
-// console.log(line.Calls[0].Args);
-// console.log(dynamiccast('2*7.1'));
-// console.log("wo(dakcd)oaw(*)k".match(/\(.*\*.*\)/));
-// console.log('ext::get("hello")'.match(/.*\)[^()]*\*(?=(?:(?!").)*$)/, STRING_EMPTY).toString()); // expected: *[10-8]
