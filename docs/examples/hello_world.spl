@@ -1,0 +1,1 @@
+ext::writel("hello world");     // this comment should be ignored
