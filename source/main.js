@@ -26,8 +26,16 @@ function dynamiccast(str) {
     if (temp !== 'ERROR') return temp;
     return +str; // NaN if fails.
 };
-const tokenize = (str) => btoa(str);
-const detokenize = (encodedStr) => atob(encodedStr);
+/**
+ * @returns {string}
+ * @param {string} str
+ */
+const tokenize = (str) => str == STRING_EMPTY ? '=' : btoa(str);
+/**
+ * @returns {string}
+ * @param {string} encodedStr
+ */
+const detokenize = (encodedStr) => encodedStr == '=' ? STRING_EMPTY : atob(encodedStr);
 
 function deepLog(obj) {
     const seen = new WeakSet();
@@ -87,7 +95,8 @@ class Call {
             .map(arg => dynamiccast(arg.trim()));
     }
 }
-const line = new LineData('ext::writel("hel()**|lo", 1*716+93)*|ext::writel();');
+const line = new LineData('ext::writel("wdadadad", 1*716+93)*|ext::writel();');
 line.Calls.forEach(c =>
     deepLog(c)
 );
+console.log(detokenize('=') + ' aa');
