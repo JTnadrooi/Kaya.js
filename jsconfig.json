@@ -1,0 +1,20 @@
+{
+    "compilerOptions": {
+        "target": "ESNext", // Use modern ECMAScript features
+        "module": "ESNext", // Support ES Modules
+        "moduleResolution": "Node", // Resolve modules like Node.js
+        "baseUrl": "./", // Base directory for imports
+        "paths": { // Optional: Define aliases for modules
+            "*": [
+                "node_modules/*"
+            ]
+        },
+        "checkJs": true
+    },
+    "include": [
+        "source/**/*"
+    ],
+    "exclude": [
+        "node_modules"
+    ]
+}
