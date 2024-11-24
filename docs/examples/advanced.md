@@ -1,5 +1,9 @@
 # Advanced SPL Example
 
+## SPL1.1 (DEPRICATED)
+
+This syntax is not supported in the current version.
+
 ```c++
 void: main(Int32~1);										        //program entry pointInt32~0
 	ext::writel(@1);                                                //write the main input on a new line
@@ -14,4 +18,16 @@ void: main(Int32~1);										        //program entry pointInt32~0
 
 Int32: do(Int32~1, Int32~2);
 	ext::writel(@1)|&::return(@1);
+```
+
+## SPL2.0
+
+Syntax supported in the most recent version of the Kaya.js interpeter.
+
+```c++
+void: main(Int32~1); // entrypoint spl.
+	ext::writel(@1); // display the input variable. (given writel converts it to a string automatically)
+	ext::get_value1()*|ext::get_value2()*[1+1]|ext::writel(*, **);	// gets 2 values and displays them.
+	ext::writel(*); // displays the first value of the line above.
+	clear();
 ```
