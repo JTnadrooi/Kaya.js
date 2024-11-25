@@ -1,6 +1,6 @@
 // import * as utils from './utils.js';
-const utils = require('./utils.js');
-const fs = require('fs');
+const utils = require("./utils.js");
+const fs = require("fs");
 
 class SpellScipt {
     constructor(str) {
@@ -13,7 +13,7 @@ class SpellScipt {
         str.match(stringRegex).forEach(s => {
             const noQuotes = s.slice(1, -1);
             withTokenizedStrings = withTokenizedStrings.replace(s, utils.tokenize(noQuotes));
-            console.log('tokenizing line strings; ' + noQuotes + ' to ' + utils.tokenize(noQuotes));
+            console.log("tokenizing line strings; " + noQuotes + " to " + utils.tokenize(noQuotes));
         });
 
         this.subCompiled = withTokenizedStrings;
@@ -33,10 +33,10 @@ class LineData {
         str.match(stringRegex).forEach(s => {
             const noQuotes = s.slice(1, -1);
             withTokenizedStrings = withTokenizedStrings.replace(s, utils.tokenize(noQuotes));
-            console.log('tokenizing line strings; ' + noQuotes + ' to ' + utils.tokenize(noQuotes));
+            console.log("tokenizing line strings; " + noQuotes + " to " + utils.tokenize(noQuotes));
         });
         this.calls = withTokenizedStrings.slice(0, -1) // no need for the ";".
-            .split('|')
+            .split("|")
             .map(call => new Call(call.trim()));
     }
 }
@@ -55,24 +55,24 @@ class Call {
         const pointerMatch = str.match(pointerRegex);
         this.pointer = Number(pointerMatch ? pointerMatch[0].length : -1);
 
-        const [fullFunc, argsStr] = str.replace(pointerRegex, utils.STRING_EMPTY).split('(', 2);
-        [this.namespace, this.name] = fullFunc.split('::', 2);
+        const [fullFunc, argsStr] = str.replace(pointerRegex, utils.STRING_EMPTY).split("(", 2);
+        [this.namespace, this.name] = fullFunc.split("::", 2);
 
         // console.log("agrs string: " + argsStr);
 
         this.args = argsStr.slice(0, -1) // remove trailing ")".
-            .splitSafe(',') // returns [] if splitter is not found.
+            .splitSafe(",") // returns [] if splitter is not found.
             .map(arg => utils.dynamicCast(arg.trim()));
     }
 }
-// const line = new LineData('ext::writel("hello world!", 1*716+93)*|ext::writel();');
+// const line = new LineData("ext::writel("hello world!", 1*716+93)*|ext::writel();");
 // line.calls.forEach(c =>
 //     utils.deepLog(c)
 // );
 
 
-fs.readFile('./docs/tests/advanced.spl', (err, data) => {
+fs.readFile("./docs/tests/advanced.spl", (err, data) => {
     if (err) throw err;
 
-    console.log(data.toString());
+    console.log(utils.subCompile(data.toString()));
 });
