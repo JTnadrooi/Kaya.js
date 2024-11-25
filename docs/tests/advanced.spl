@@ -1,5 +1,8 @@
 void: main(Int32~1); // entrypoint spl.
+<<<<<<< HEAD
 	ext::writel("hello world!"); // gets nothing as the pointer is pointing to memory of the line above, this gets cleared after every line.
+=======
+>>>>>>> 8a268f61c21681b098e61eb675559d978c9edb20
 	ext::writel(@1); // display the input variable. (given writel converts it to a string automatically)
 	ext::get_value1()*|ext::get_value2()*[1+1]|ext::writel(*, **);	// gets 2 values and displays them.
 	ext::writel(*); // gets nothing as the pointer is pointing to memory of the line above, this gets cleared after every line.

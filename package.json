@@ -1,4 +1,5 @@
 {
+  "type": "module",
   "dependencies": {
     "bigeval": "^3.2.3"
   }
