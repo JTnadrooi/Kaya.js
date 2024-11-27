@@ -1,5 +1,6 @@
 {
   "dependencies": {
-    "bigeval": "^3.2.3"
+    "bigeval": "^3.2.3",
+    "linq": "^3.2.4"
   }
 }

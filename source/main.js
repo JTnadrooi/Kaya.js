@@ -70,9 +70,11 @@ class Call {
 //     utils.deepLog(c)
 // );
 
-
 fs.readFile("./docs/tests/advanced.spl", (err, data) => {
     if (err) throw err;
-
     console.log(utils.subCompile(data.toString()));
 });
+
+// const arr = ["void", "0", "main", ""];
+// const result = arr.filter(part => part);
+// console.log("0" == true);

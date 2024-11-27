@@ -1,14 +1,15 @@
 // import BigEval from 'bigeval';
 const BigEval = require("bigeval");
+const Enumerable = require('linq');
 
 const bigEvalInstance = new BigEval();
 
-const TineType = Object.freeze({
+const LineType = Object.freeze({
     LINE: "LINE",
     HEADER: "HEADER",
     IMPORT: "IMPORT",
 });
-
+const sectionReturnTypes = ["VOID", "STRING", "INT32", "SINGLE"];
 const STRING_EMPTY = "";
 /**
  * @returns {string[]} An array of split strings, or an empty array if the delimiter is not found.
@@ -16,6 +17,10 @@ const STRING_EMPTY = "";
  */
 String.prototype.splitSafe = function (delimiter) {
     return this.indexOf(delimiter) === -1 ? [] : this.split(delimiter);
+};
+String.prototype.replaceAtIndex = function (index, length, replacement) {
+    if (index < 0 || index >= this.length || length < 0) throw new RangeError("Invalid index or length for replacement.");
+    return this.slice(0, index) + replacement + this.slice(index + length);
 };
 // Object.defineProperty(String.prototype, "splitSafe", {
 //     /**
@@ -88,7 +93,9 @@ function deepLog(obj) { // not mine but very usefull
     console.dir(recursiveDump(obj));
 }
 function getLineType(str) {
-
+    const namespaceLessRegex = /^[^:]*:[^:]*$/g // matches (everything) if there is a <anychar>:<anychar>
+    if (namespaceLessRegex.test(str)) return LineType.HEADER;
+    else return LineType.LINE;
 }
 /**
  * @returns {string}
@@ -98,21 +105,32 @@ function subCompile(str) {
     // regex galore! (cat walked on keyboard fr)
     const stringRegex = /(["'])(?:(?=(\\?))\2.)*?\1/g; // matches strings. (including the quotes)
     const commentsRegex = /\/\*(?:[^*]|(?:\*+[^*/]))*\*+\/|\/\/.*/g; // matches inline comments. (including the slashes)
+    const evalRegex = /\[[^\[\]]*\]/g;  // matches all [] expressions. (including the []'s)
+    const numericRegex = /\*+(?!\d)/g; // matches all direct numerics directly after the * symbol. // including the *, does not return ALL *'s.
 
     let subcompiled = str;
 
     subcompiled = subcompiled.replace(/\r\n|\r|\n/g, "\n"); // normalize line endings.
     subcompiled = subcompiled.replaceAll(commentsRegex, STRING_EMPTY); // remove comments.
-    subcompiled = subcompiled.split("\n") // linemapping.
-        .map(line => line.trim()) // trim each lines whitespace.
-        .filter(line => line) // strings are bools now! (its a empty string check)
-        // .map(line => (({ "4": "case1", "8": "case2" })[getLineType(line)] ?? "Unknown") + line)
-        .join("\n");
     str.match(stringRegex).forEach(s => { // tokenize strings.
         const noQuotes = s.slice(1, -1);
         subcompiled = subcompiled.replace(s, tokenize(noQuotes));
         console.log("tokenizing line strings; " + noQuotes + " to " + tokenize(noQuotes));
     });
+    subcompiled = subcompiled.split("\n") // (post) linemapping.
+        .map(line => line.replaceAll(/[\n\r\s\t]+/g, STRING_EMPTY)) // remove ALL whitespace. (Does not have to be trailing => (AFTER) strings tokenized, comments removed.)
+        .filter(line => line) // strings are bools now (its a empty string check)
+        .map(line => "<" + getLineType(line) + ">" + line)
+        .join("\n");
+    subcompiled.match(evalRegex).forEach(rm => // evaluate constant [] expressions.
+        subcompiled = subcompiled.replace(rm, bigEvalInstance.exec(rm.slice(1, -1)))
+    );
+    [...subcompiled.matchAll(numericRegex)] // matchall or it does not work for reasons unknown.
+        .reverse() // from back to front to prevent index-shifting.
+        .forEach(match => // to collapsed replace.
+            subcompiled = subcompiled.replaceAtIndex(match.index, match[0].length, "*" + match[0].length)
+        );
+
     return subcompiled;
 }
 

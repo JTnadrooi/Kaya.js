@@ -1,8 +1,10 @@
-# Import Statements
+# Statements
 
-```c++
-import ext;          // warns the runtime that namespace "ext" is expected.
-import ext : ext2;   // same as above but also renames "ext" to "ext2".
-import ext : ext, deb;   // compines namespaces "ext" and "deb" into "ext"
-import ext2 : ext, deb;
+## Import
+
+```ts
+@import:ext;          // warns the runtime that namespace "ext" is expected.
+@import:ext2 > ext;   // same as above but also renames "ext" to "ext2".
+@import:[ext, deb] > ext;   // compines namespaces "ext" and "deb" into "ext"
+@import:[ext, deb] > ext2;
 ```
