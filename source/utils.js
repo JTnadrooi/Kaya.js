@@ -1,6 +1,7 @@
 // import BigEval from 'bigeval';
 const BigEval = require("bigeval");
-const Enumerable = require('linq');
+const Enumerable = require("linq");
+const { SpellScipt, LineData, Call, SectionHeader, } = require("./components.js");
 
 const bigEvalInstance = new BigEval();
 
@@ -71,7 +72,7 @@ const detokenize = (encodedStr) => {
     return encodedStrWithoutIndicator == "=" ? STRING_EMPTY : atob(encodedStrWithoutIndicator);
 }
 
-function deepLog(obj) { // not mine but very usefull
+function deepLog(obj) { // not mine but very usefull.
     const seen = new WeakSet();
     const recursiveDump = (value, indent = 0) => {
         if (value === null) return "null";
@@ -93,9 +94,25 @@ function deepLog(obj) { // not mine but very usefull
     console.dir(recursiveDump(obj));
 }
 function getLineType(str) {
-    const namespaceLessRegex = /^[^:]*:[^:]*$/g // matches (everything) if there is a <anychar>:<anychar>
-    if (namespaceLessRegex.test(str)) return LineType.HEADER;
-    else return LineType.LINE;
+    // const namespaceLessRegex = /^[^:]*:[^:]*$/g // matches (everything) if there is a <anychar>:<anychar>
+    return sectionReturnTypes.some(s => str.toUpperCase().includes(s)) ? LineType.HEADER : LineType.LINE;
+}
+/**
+ * @returns {LineData | SectionHeader}
+ * @param {string} encodedStr
+ */
+function cast(str) {
+    switch (getLineType(str)) {
+        case "HEADER":
+            return new SectionHeader();
+            break;
+        case "LINE":
+            return new LineData();
+            break;
+        default:
+            console.log("huh");
+            break;
+    }
 }
 /**
  * @returns {string}
@@ -137,6 +154,8 @@ function subCompile(str) {
 module.exports = {
     bigEvalInstance,
     STRING_EMPTY,
+    getLineType,
+    cast,
     dynamicCast,
     tokenize,
     detokenize,
