@@ -30,7 +30,7 @@ class LineData {
         let withTokenizedStrings = str;
         this.calls = withTokenizedStrings.slice(0, -1) // no need for the ";".
             .split("|")
-            .map(call => new Call(call.trim()));
+            .map(call => new Call(call));
     }
 }
 class SectionHeader {
@@ -48,23 +48,19 @@ class Call {
         /** @type {string} */ this.name;
         /** @type {!Object[]} The call arguments. May be an empty array if no arguments are given. */ this.args;
 
-        const pointerRegex = /\*+$/; // only supports "simple" pointers.
+        const pointerRegex = /\*\d*$/g; // only supports "simple" pointers.
 
-        const pointerMatch = str.match(pointerRegex);
-        this.pointer = Number(pointerMatch ? pointerMatch[0].length : -1);
+        const pointerMatch = str.match(pointerRegex) ?? "*-1";
+        this.pointer = Number(pointerMatch[0].substring(1));
 
         const [fullFunc, argsStr] = str.replace(pointerRegex, utils.STRING_EMPTY).split("(", 2);
         [this.namespace, this.name] = fullFunc.split("::", 2);
-
-        // console.log("agrs string: " + argsStr);
 
         this.args = argsStr.slice(0, -1) // remove trailing ")".
             .splitSafe(",") // returns [] if splitter is not found.
             .map(arg => utils.dynamicCast(arg.trim()));
     }
 }
-
-
 /**
  * @returns {string[]} An array of split strings, or an empty array if the delimiter is not found.
  * @this {string} The string that the method is called on.
@@ -122,7 +118,6 @@ const utils = {
         const encodedStrWithoutIndicator = encodedStr.slice(0, -1);
         return encodedStrWithoutIndicator == "=" ? STRING_EMPTY : atob(encodedStrWithoutIndicator);
     },
-
     deepLog(obj) { // not mine but very usefull.
         const seen = new WeakSet();
         const recursiveDump = (value, indent = 0) => {
@@ -193,15 +188,13 @@ const utils = {
         subcompiled.match(evalRegex).forEach(rm => // evaluate constant [] expressions.
             subcompiled = subcompiled.replace(rm, bigEvalInstance.exec(rm.slice(1, -1)))
         );
-        [...subcompiled.matchAll(numericRegex)] // matchall or it does not work for reasons unknown.
+        [...subcompiled.matchAll(numericRegex)]
             .reverse() // from back to front to prevent index-shifting.
-            .forEach(match => // to collapsed replace.
+            .forEach(match => // to collapsed format replace() sequence.
                 subcompiled = subcompiled.replaceAtIndex(match.index, match[0].length, "*" + match[0].length)
             );
-
         return subcompiled;
     },
 }
-
 
 utils.deepLog(new LineData("ext::get_value1()*1|ext::get_value2()*2|ext::writel(*1,*2);"))
