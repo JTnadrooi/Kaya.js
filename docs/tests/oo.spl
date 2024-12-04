@@ -1,0 +1,5 @@
+<void>main(Int32~1): // entrypoint spl.
+	ext::writel("hello world!");
+	new(1.212, "ahooy")*1|*1->dump()|ext::writel("Hello ", *1); // creates a new object at *1, calls it "dump" method and then prints it.
+    new(1.212, "ahooy")~|~->dump()|ext::writel("Hello ", ~); // same as above
+	
