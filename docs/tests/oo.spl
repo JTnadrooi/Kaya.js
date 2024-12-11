@@ -1,5 +1,4 @@
 <void>main(Int32~1): // entrypoint spl.
 	ext::writel("hello world!");
-	new(1.212, "ahooy")*1|*1->dump()|ext::writel("Hello ", *1); // creates a new object at *1, calls it "dump" method and then prints it.
-    new(1.212, "ahooy")~|~->dump()|ext::writel("Hello ", ~); // same as above
-	
+	new ext_car::("civic", "honda")*|*->dump()|ext::writel("Hello ", *); // creates a new object at *1, calls it "dump" method and then prints it.
+    new ext_car::("civic", "honda")~|~->dump()|ext::writel("Hello ", ~); // same as above, the "~" automatically assigns a free pointer when set and gets the last set pointer when get.

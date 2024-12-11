@@ -1,11 +1,14 @@
-// classes and such (idk if js has structs tbh)
 const fs = require("fs");
 const BigEval = require("bigeval");
 const Enumerable = require("linq");
 const bigEvalInstance = new BigEval();
 
 class SpellScipt {
-    constructor(str) { // str should be compiled
+    /**
+     * Initialize a new spellscipt from a (optionally subcompiled) string.
+     * @param {string} str 
+     */
+    constructor(str) {
         const stringRegex = /(["'])(?:(?=(\\?))\2.)*?\1/g
 
         /** @type {string} The subcompiled version of this spellscipt.*/ this.subCompiled;
@@ -22,7 +25,9 @@ class SpellScipt {
         console.log(this.subCompiled);
     }
 }
-
+/**
+ * A single Spellscript "Line". A line is a region where the memory does not clear.
+ */
 class LineData {
     constructor(str) {
         /** @type {Call[]} */ this.calls;
@@ -33,6 +38,17 @@ class LineData {
             .map(call => new Call(call));
     }
 }
+/**
+ * A parameter depending on memory.
+ */
+class MemoryParameter {
+    constructor(pointer) {
+        this.point = pointer;
+    }
+}
+/**
+ * A header of a Spellscipt Section/function.
+ */
 class SectionHeader {
     constructor(str) {
 
@@ -73,6 +89,9 @@ String.prototype.replaceAtIndex = function (index, length, replacement) {
     return this.slice(0, index) + replacement + this.slice(index + length);
 };
 
+/**
+ * Utils, sometimes used for testing.
+ */
 const utils = {
     LineType: Object.freeze({
         LINE: "LINE",
@@ -93,14 +112,16 @@ const utils = {
         else if (str.endsWith("=")) return detokenize(str);
         else if (str.toLowerCase() === "true") return true;
         else if (str.toLowerCase() === "false") return false;
+        else if (str.startsWith("*")) return new MemoryParameter(+(str.substring(1)));
 
         const temp = bigEvalInstance.exec(str); // a bit slow to do this so often.
         if (temp !== "ERROR") return temp;
         return +str; // NaN if fails.
     },
     /**
-     * @returns {string}
-     * @param {string} str
+     * @param {string} str A normal string, NO QUOTES.
+     * @returns {string} Returns a string without any funny characters.
+     * @see {detokenize} A function that detokenizes a string.
      */
     tokenize(str) {
         console.log("tokenizing str: " + str)
@@ -118,6 +139,9 @@ const utils = {
         const encodedStrWithoutIndicator = encodedStr.slice(0, -1);
         return encodedStrWithoutIndicator == "=" ? STRING_EMPTY : atob(encodedStrWithoutIndicator);
     },
+    /**
+     * A recursive logging method. Should be excluded from the final build.
+     */
     deepLog(obj) { // not mine but very usefull.
         const seen = new WeakSet();
         const recursiveDump = (value, indent = 0) => {
@@ -141,11 +165,12 @@ const utils = {
     },
     getLineType(str) {
         // const namespaceLessRegex = /^[^:]*:[^:]*$/g // matches (everything) if there is a <anychar>:<anychar>
-        return sectionReturnTypes.some(s => str.toUpperCase().includes(s)) ? LineType.HEADER : LineType.LINE;
+        return sectionReturnTypes.some(s => str.toUpperCase().includes("<" + s + ">")) ? LineType.HEADER : LineType.LINE;
     },
     /**
-     * @returns {LineData | SectionHeader}
-     * @param {string} encodedStr
+     * Casts a string to the designated spl line.
+     * @param {string} encodedStr The encoded string, should be precompiled.
+     * @returns {LineData | SectionHeader} This depends on the linetype. 
      */
     cast(str) {
         switch (getLineType(str)) {
@@ -161,8 +186,8 @@ const utils = {
         }
     },
     /**
-     * @returns {string}
-     * @param {string} str
+     * @param {string} str A unsubcompiled Spellscipt. (This must be the data, not the path to the spl file.)
+     * @returns {string} Returns the spellscipt subcompiled to something more easilty understanded by the class-parsers.
      */
     subCompile(str) {
         // regex galore! (cat walked on keyboard fr)
@@ -182,7 +207,7 @@ const utils = {
         });
         subcompiled = subcompiled.split("\n") // (post) linemapping.
             .map(line => line.replaceAll(/[\n\r\s\t]+/g, STRING_EMPTY)) // remove ALL whitespace. (Does not have to be trailing => (AFTER) strings tokenized, comments removed.)
-            .filter(line => line) // strings are bools now (its a empty string check)
+            .filter(line => line) // strings are bools now. (its a empty string check)
             .map(line => "<" + getLineType(line) + ">" + line)
             .join("\n");
         subcompiled.match(evalRegex).forEach(rm => // evaluate constant [] expressions.
@@ -197,4 +222,4 @@ const utils = {
     },
 }
 
-utils.deepLog(new LineData("ext::get_value1()*1|ext::get_value2()*2|ext::writel(*1,*2);"))
+utils.deepLog(new LineData("ext::get_value1()*1|ext::get_value2()*2|ext::writel(*1,*2);")) // compiled linedata
