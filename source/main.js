@@ -3,6 +3,9 @@ const BigEval = require("bigeval");
 const Enumerable = require("linq");
 const bigEvalInstance = new BigEval();
 
+// const namespace_ext = require("./spellbooks/example.book.js");
+
+
 class SpellScipt {
     /**
      * Initialize a new spellscipt from a (optionally subcompiled) string.
@@ -43,7 +46,7 @@ class LineData {
  */
 class MemoryParameter {
     constructor(pointer) {
-        this.point = pointer;
+        this.pointer = pointer;
     }
 }
 /**
@@ -58,6 +61,9 @@ class SectionHeader {
  * Represents a single {@link Call} from a line. One line may have one or more calls, the {@link LineData}
  */
 class Call {
+    /**
+     * @param {string} str
+     */
     constructor(str) {
         /** @type {number | null} The memory pointer.*/ this.pointer;
         /** @type {string} The namespace this {@link Call} calls to.*/ this.namespace;
@@ -66,8 +72,10 @@ class Call {
 
         const pointerRegex = /\*\d*$/g; // only supports "simple" pointers.
 
-        const pointerMatch = str.match(pointerRegex) ?? "*-1";
-        this.pointer = Number(pointerMatch[0].substring(1));
+        const pointerMatch = str.match(pointerRegex) ?? ["NULL"];
+        this.pointer = pointerMatch[0] == "NULL" ? null : Number(pointerMatch[0].substring(1));
+
+        if (this.pointer == 0) throw new Error();
 
         const [fullFunc, argsStr] = str.replace(pointerRegex, utils.STRING_EMPTY).split("(", 2);
         [this.namespace, this.name] = fullFunc.split("::", 2);
@@ -147,7 +155,7 @@ const utils = {
         const recursiveDump = (value, indent = 0) => {
             if (value === null) return "null";
             if (typeof value !== "object") return `${typeof value}: ${value}`;
-            if (seen.has(value)) return "[Circular]";
+            if (seen.has(value)) return "[circular]";
             seen.add(value);
             const isArray = Array.isArray(value);
             const typeInfo = isArray ? `Array(${value.length})` : value.constructor?.name || "Object";
@@ -220,6 +228,32 @@ const utils = {
             );
         return subcompiled;
     },
+    /**
+     * @param {LineData|SpellScipt|Call} splData
+     * @param {number} memorySize
+     * @param {Object[]} spellbooks
+     * @returns {number} The error code or 1 if succes.
+     */
+    evaluate(splData, spellbooks = [], memorySize = 16) {
+        let memory = {};
+        if (spellbooks.length == 0) console.error("ERROR");
+        if (memorySize < 0) console.error("ERROR");
+        if (splData instanceof LineData) {
+            splData.calls.forEach(c => {
+                const targetBook = spellbooks.find(item => item.namespace === c.namespace);
+                const returnValue = targetBook[c.name](...(c.args).map(a =>
+                    a instanceof MemoryParameter ? memory[a.pointer - 1] : a
+                ));
+                if (c.pointer !== null) memory[c.pointer - 1] = returnValue;
+            });
+        }
+    }
+
 }
 
-utils.deepLog(new LineData("ext::get_value1()*1|ext::get_value2()*2|ext::writel(*1,*2);")) // compiled linedata
+utils.deepLog(new Call("ext::get_value1()"));
+
+utils.deepLog(new LineData("ext::get_value1()*1|ext::get_value2()*2|ext::writel(*1,*2);")); // compiled linedata
+utils.evaluate(new LineData("ext::get_value1()*1|ext::get_value2()*2|ext::writel(*1,*2);"), [
+    require("./spellbooks/example.book.js"),
+]);
