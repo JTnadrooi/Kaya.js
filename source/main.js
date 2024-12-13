@@ -241,7 +241,7 @@ const utils = {
         if (splData instanceof LineData) {
             splData.calls.forEach(c => {
                 const targetBook = spellbooks.find(item => item.namespace === c.namespace);
-                const returnValue = targetBook[c.name](...(c.args).map(a =>
+                const returnValue = targetBook[c.name](...c.args.map(a =>
                     a instanceof MemoryParameter ? memory[a.pointer - 1] : a
                 ));
                 if (c.pointer !== null) memory[c.pointer - 1] = returnValue;
