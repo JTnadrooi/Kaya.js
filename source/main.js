@@ -1,8 +1,10 @@
 const fs = require("fs");
 const BigEval = require("bigeval");
 const Enumerable = require("linq");
-const bigEvalInstance = new BigEval();
+const AsitDebugStream = require("../lib/asitdebug.js");
 
+const bigEvalInstance = new BigEval();
+const debugStream = new AsitDebugStream();
 // const namespace_ext = require("./spellbooks/example.book.js");
 
 
@@ -12,26 +14,30 @@ class SpellScipt {
      * @param {string} str 
      */
     constructor(str) {
-        const stringRegex = /(["'])(?:(?=(\\?))\2.)*?\1/g
+        // const stringRegex = /(["'])(?:(?=(\\?))\2.)*?\1/g
 
-        /** @type {string} The subcompiled version of this spellscipt.*/ this.subCompiled;
+        // /** @type {string} The subcompiled version of this spellscipt.*/ this.subCompiled;
 
-        let withTokenizedStrings = str;
-        str.match(stringRegex).forEach(s => {
-            const noQuotes = s.slice(1, -1);
-            withTokenizedStrings = withTokenizedStrings.replace(s, utils.tokenize(noQuotes));
-            console.log("tokenizing line strings; " + noQuotes + " to " + utils.tokenize(noQuotes));
-        });
+        // let withTokenizedStrings = str;
+        // str.match(stringRegex).forEach(s => {
+        //     const noQuotes = s.slice(1, -1);
+        //     withTokenizedStrings = withTokenizedStrings.replace(s, utils.tokenize(noQuotes));
+        //     console.log("tokenizing line strings; " + noQuotes + " to " + utils.tokenize(noQuotes));
+        // });
 
-        this.subCompiled = withTokenizedStrings;
+        // this.subCompiled = withTokenizedStrings;
 
-        console.log(this.subCompiled);
+        // console.log(this.subCompiled);
     }
 }
 /**
  * A single Spellscript "Line". A line is a region where the memory does not clear.
  */
 class LineData {
+    /**
+     * 
+     * @param {string} str 
+     */
     constructor(str) {
         /** @type {Call[]} */ this.calls;
 
@@ -69,20 +75,36 @@ class Call {
         /** @type {string} The namespace this {@link Call} calls to.*/ this.namespace;
         /** @type {string} */ this.name;
         /** @type {!Object[]} The call arguments. May be an empty array if no arguments are given. */ this.args;
+        /** @type {string} The source string. */ this.source;
 
-        const pointerRegex = /\*\d*$/g; // only supports "simple" pointers.
+        debugStream.log("casting (subcompiled) spl.Call from \"" + str + "\"..");
+        const pointerRegex = /\*\d*$/g; // only supports "simple" pointers, this is why it needs to be subcompiled first.
 
+        debugStream.log("spl.Call.pointer..");
         const pointerMatch = str.match(pointerRegex) ?? ["NULL"];
         this.pointer = pointerMatch[0] == "NULL" ? null : Number(pointerMatch[0].substring(1));
+        debugStream.log("<found: " + this.pointer);
 
         if (this.pointer == 0) throw new Error();
 
+        debugStream.log("spl.Call.namespace/spl.Call.name..");
         const [fullFunc, argsStr] = str.replace(pointerRegex, utils.STRING_EMPTY).split("(", 2);
         [this.namespace, this.name] = fullFunc.split("::", 2);
+        debugStream.log("<found: ", 0, [this.namespace, this.name]);
 
+        debugStream.log("spl.Call.args(splitting)..");
         this.args = argsStr.slice(0, -1) // remove trailing ")".
             .splitSafe(",") // returns [] if splitter is not found.
             .map(arg => utils.dynamicCast(arg.trim()));
+        debugStream.log("<found: ", 0, [...this.args]);
+        debugStream.log("<spl.Call contruction/cast finished succesfully.");
+    }
+    /**
+     * Get this Call as a Linedata wrapper.
+     * @returns {LineData}
+     */
+    asLine() {
+        return new LineData(this.source + ";")
     }
 }
 /**
@@ -242,7 +264,7 @@ const utils = {
             splData.calls.forEach(c => {
                 const targetBook = spellbooks.find(item => item.namespace === c.namespace);
                 const returnValue = targetBook[c.name](...c.args.map(a =>
-                    a instanceof MemoryParameter ? memory[a.pointer - 1] : a
+                    (a instanceof MemoryParameter) ? memory[a.pointer - 1] : a
                 ));
                 if (c.pointer !== null) memory[c.pointer - 1] = returnValue;
             });
@@ -253,7 +275,10 @@ const utils = {
 
 utils.deepLog(new Call("ext::get_value1()"));
 
-utils.deepLog(new LineData("ext::get_value1()*1|ext::get_value2()*2|ext::writel(*1,*2);")); // compiled linedata
-utils.evaluate(new LineData("ext::get_value1()*1|ext::get_value2()*2|ext::writel(*1,*2);"), [
-    require("./spellbooks/example.book.js"),
-]);
+// utils.deepLog(new LineData("ext::get_value1()*1|ext::get_value2()*2|ext::writel(*1,*2);")); // compiled linedata
+// // utils.evaluate(new LineData("ext::get_value1()*1|ext::get_value2()*2|ext::writel(*1,*2);"), [
+// //     require("./spellbooks/example.book.js"),
+// // ]);
+// utils.evaluate(new Call("ext::writel(\"Hello \",\"world!\")").asLine(), [
+//     require("./spellbooks/example.book.js"),
+// ]);

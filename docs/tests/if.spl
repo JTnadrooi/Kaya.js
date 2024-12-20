@@ -1,4 +1,4 @@
 <void>main(Int32~1): // IF programming test
 	[if * == true]ext::writel("True!"); // if *1 is a bool and true, writel().
-    [if *]ext::writel("It has something.")|ext::writel("This always runs"); // if *1 has been set, writel(). The second call has no if statement and thus always runs.
+    [if *]ext::writel("Pointer 1 holds something.")|ext::writel("Hello world!"); // if *1 has been set, writel(). The second call has no if statement and thus always runs.
     [/g if * == true]ext::writel("Writing line..")|ext::writel("This sometimes runs"); // because of /g tag, the if statements counts for the entire line.
