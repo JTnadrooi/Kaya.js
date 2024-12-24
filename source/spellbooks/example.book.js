@@ -1,7 +1,6 @@
 /**
  * An example spellbook to be used with the evaluate() method.
  */
-
 const STRING_EMPTY = "";
 module.exports = {
     namespace: "ext",

@@ -4,7 +4,7 @@ const Enumerable = require("linq");
 const AsitDebugStream = require("../lib/asitdebug.js");
 
 const bigEvalInstance = new BigEval();
-const debugStream = new AsitDebugStream();
+const debugStream = new AsitDebugStream(undefined, "KAYA.JS<>PLAYGROUND");
 // const namespace_ext = require("./spellbooks/example.book.js");
 
 
@@ -41,10 +41,12 @@ class LineData {
     constructor(str) {
         /** @type {Call[]} */ this.calls;
 
+        debugStream.log("casting (subcompiled) spl.LineData from \"" + str + "\"..");
         let withTokenizedStrings = str;
         this.calls = withTokenizedStrings.slice(0, -1) // no need for the ";".
             .split("|")
             .map(call => new Call(call));
+        debugStream.log("<spl.Call contruction/cast finished succesfully.");
     }
 }
 /**
@@ -270,11 +272,9 @@ const utils = {
             });
         }
     }
-
 }
-
-utils.deepLog(new Call("ext::get_value1()"));
-
+// utils.deepLog(new Call("ext::get_value1()"));
+new Call("ext::get_value1()");
 // utils.deepLog(new LineData("ext::get_value1()*1|ext::get_value2()*2|ext::writel(*1,*2);")); // compiled linedata
 // // utils.evaluate(new LineData("ext::get_value1()*1|ext::get_value2()*2|ext::writel(*1,*2);"), [
 // //     require("./spellbooks/example.book.js"),
