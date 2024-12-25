@@ -40,12 +40,18 @@ class LineData {
      */
     constructor(str) {
         /** @type {Call[]} */ this.calls;
+        this.source = str;
 
         debugStream.log("casting (subcompiled) spl.LineData from \"" + str + "\"..");
+
+        if (!this.source.endsWith(";")) throw new Error("missing \";\" while parsing linedata; \"" + str + "\".");
+
         let withTokenizedStrings = str;
+        debugStream.log("splitting casts..");
         this.calls = withTokenizedStrings.slice(0, -1) // no need for the ";".
             .split("|")
             .map(call => new Call(call));
+        debugStream.log("<splitting succes.");
         debugStream.log("<spl.Call contruction/cast finished succesfully.");
     }
 }
@@ -79,7 +85,9 @@ class Call {
         /** @type {!Object[]} The call arguments. May be an empty array if no arguments are given. */ this.args;
         /** @type {string} The source string. */ this.source;
 
-        debugStream.log("casting (subcompiled) spl.Call from \"" + str + "\"..");
+        this.source = str;
+
+        debugStream.log("casting (subcompiled) spl.Call from \"" + this.source + "\"..");
         const pointerRegex = /\*\d*$/g; // only supports "simple" pointers, this is why it needs to be subcompiled first.
 
         debugStream.log("spl.Call.pointer..");
@@ -99,7 +107,7 @@ class Call {
             .splitSafe(",") // returns [] if splitter is not found.
             .map(arg => utils.dynamicCast(arg.trim()));
         debugStream.log("<found: ", 0, [...this.args]);
-        debugStream.log("<spl.Call contruction/cast finished succesfully.");
+        debugStream.log("<spl.Call contruction/cast finished succesfully; source: \"" + this.source + "\"");
     }
     /**
      * Get this Call as a Linedata wrapper.
@@ -274,7 +282,7 @@ const utils = {
     }
 }
 // utils.deepLog(new Call("ext::get_value1()"));
-new Call("ext::get_value1()");
+new LineData("ext::get_value1();");
 // utils.deepLog(new LineData("ext::get_value1()*1|ext::get_value2()*2|ext::writel(*1,*2);")); // compiled linedata
 // // utils.evaluate(new LineData("ext::get_value1()*1|ext::get_value2()*2|ext::writel(*1,*2);"), [
 // //     require("./spellbooks/example.book.js"),
