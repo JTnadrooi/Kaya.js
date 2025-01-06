@@ -51,7 +51,7 @@ class LineData {
         this.calls = withTokenizedStrings.slice(0, -1) // no need for the ";".
             .split("|")
             .map(call => new Call(call));
-        debugStream.log("<splitting succes.");
+        debugStream.log("<splitting succes, " + this.calls.length + " calls created from \"" + this.source + "\".");
         debugStream.log("<spl.Call contruction/cast finished succesfully.");
     }
 }
@@ -145,10 +145,9 @@ const utils = {
      */
     dynamicCast(str) {
         const stringRegex = /^"(.*)"$/;
-        console.log("attempting dc of string: " + str);
+        debugStream.log("attempting dynamic cast of string: \"" + str + "\".");
 
-        // if (str.match(stringRegex)) return str.replace(stringRegex, '$1');
-        if (str.match(stringRegex)) console.log("uh");
+        if (str.match(stringRegex)) throw new Error("strings cannot have double quotes, these should already be filtered out.");
         else if (str.endsWith("=")) return detokenize(str);
         else if (str.toLowerCase() === "true") return true;
         else if (str.toLowerCase() === "false") return false;
@@ -164,20 +163,24 @@ const utils = {
      * @see {detokenize} A function that detokenizes a string.
      */
     tokenize(str) {
-        console.log("tokenizing str: " + str)
-        return (str == STRING_EMPTY ? "=" : btoa(str)) + "=";
+        debugStream.log("tokenizing string: \"" + str + "\"..");
+        const toret = (str == this.STRING_EMPTY ? "=" : btoa(str)) + "=";
+        debugStream.log("<succes (as): \"" + toret + "\".");
+        return toret;
     },
     /**
      * @returns {string}
-     * @param {string} encodedStr
+     * @param {string} str
      */
-    detokenize(encodedStr) {
-        console.log("detokenizing endoced str: " + encodedStr);
-        if (!encodedStr.endsWith("=")) {
-            console.log("INVALID STRING, NOT TOKENIZED/ENCODED");
-        }
-        const encodedStrWithoutIndicator = encodedStr.slice(0, -1);
-        return encodedStrWithoutIndicator == "=" ? STRING_EMPTY : atob(encodedStrWithoutIndicator);
+    detokenize(str) {
+        debugStream.log("detokenizing string: \"" + str + "\"..");
+        if (!str.endsWith("=")) throw new Error("INVALID STRING, NOT TOKENIZED/ENCODED");
+        const toret = str.slice(0, -1) == "=" ? this.STRING_EMPTY : atob(str.slice(0, -1));
+        debugStream.log("<succes (as): \"" + toret + "\".");
+        return toret;
+    },
+    isSubCompiled(str) {
+        return str.startsWith("<HEADER><");
     },
     /**
      * A recursive logging method. Should be excluded from the final build.
@@ -205,7 +208,7 @@ const utils = {
     },
     getLineType(str) {
         // const namespaceLessRegex = /^[^:]*:[^:]*$/g // matches (everything) if there is a <anychar>:<anychar>
-        return sectionReturnTypes.some(s => str.toUpperCase().includes("<" + s + ">")) ? LineType.HEADER : LineType.LINE;
+        return this.sectionReturnTypes.some(s => str.toUpperCase().includes("<" + s + ">")) ? this.LineType.HEADER : this.LineType.LINE;
     },
     /**
      * Casts a string to the designated spl line.
@@ -225,11 +228,13 @@ const utils = {
                 break;
         }
     },
+
     /**
      * @param {string} str A unsubcompiled Spellscipt. (This must be the data, not the path to the spl file.)
      * @returns {string} Returns the spellscipt subcompiled to something more easilty understanded by the class-parsers.
      */
-    subCompile(str) {
+    subCompile(str, guarantee) {
+
         // regex galore! (cat walked on keyboard fr)
         const stringRegex = /(["'])(?:(?=(\\?))\2.)*?\1/g; // matches strings. (including the quotes)
         const commentsRegex = /\/\*(?:[^*]|(?:\*+[^*/]))*\*+\/|\/\/.*/g; // matches inline comments. (including the slashes)
@@ -237,22 +242,44 @@ const utils = {
         const numericRegex = /\*+(?!\d)/g; // matches all direct numerics directly after the * symbol. // including the *, does not return ALL *'s.
 
         let subcompiled = str;
+        debugStream.log("subcompiling string: \"" + (str.length > 50 ? "[TO_LONG_STRING]" : str) + "\"..");
+        if (this.isSubCompiled(str)) {
+            debugStream.log("str already subcompiled.");
+            if (guarantee) {
+                debugStream.log("<[\"guarantee\" = TRUE], subcompile skipped.");
+                return str
+            }
+            else {
+                debugStream.log("[\"guarantee\" = FALSE], throwing error!");
+                throw new Error("can't subcompile an already subcompiled spellscript.");
+            }
+        }
 
+        debugStream.log("normalizing line endings..");
         subcompiled = subcompiled.replace(/\r\n|\r|\n/g, "\n"); // normalize line endings.
-        subcompiled = subcompiled.replaceAll(commentsRegex, STRING_EMPTY); // remove comments.
+        debugStream.log("<succes.");
+        debugStream.log("removing comments..");
+        subcompiled = subcompiled.replaceAll(commentsRegex, this.STRING_EMPTY); // remove comments.
+        debugStream.log("<succes.");
+        debugStream.log("tokenizing strings..");
         str.match(stringRegex).forEach(s => { // tokenize strings.
             const noQuotes = s.slice(1, -1);
-            subcompiled = subcompiled.replace(s, tokenize(noQuotes));
-            console.log("tokenizing line strings; " + noQuotes + " to " + tokenize(noQuotes));
+            subcompiled = subcompiled.replace(s, this.tokenize(noQuotes));
         });
+        debugStream.log("<succes.");
+        debugStream.log("initializing linemapping; (whitespace removal, linetag inserting)..");
         subcompiled = subcompiled.split("\n") // (post) linemapping.
-            .map(line => line.replaceAll(/[\n\r\s\t]+/g, STRING_EMPTY)) // remove ALL whitespace. (Does not have to be trailing => (AFTER) strings tokenized, comments removed.)
+            .map(line => line.replaceAll(/[\n\r\s\t]+/g, this.STRING_EMPTY)) // remove ALL whitespace. (Does not have to be trailing => (AFTER) strings tokenized, comments removed.)
             .filter(line => line) // strings are bools now. (its a empty string check)
-            .map(line => "<" + getLineType(line) + ">" + line)
+            .map(line => "<" + this.getLineType(line) + ">" + line)
             .join("\n");
+        debugStream.log("<succes.");
+        debugStream.log("evaluating expressions..");
         subcompiled.match(evalRegex).forEach(rm => // evaluate constant [] expressions.
             subcompiled = subcompiled.replace(rm, bigEvalInstance.exec(rm.slice(1, -1)))
         );
+        debugStream.log("<succes.");
+        debugStream.log("normalizing pointers..");
         [...subcompiled.matchAll(numericRegex)]
             .reverse() // from back to front to prevent index-shifting.
             .forEach(match => // to collapsed format replace() sequence.
@@ -281,8 +308,15 @@ const utils = {
         }
     }
 }
-// utils.deepLog(new Call("ext::get_value1()"));
-new LineData("ext::get_value1();");
+// new LineData("ext::get_value1()|ext::get_value1();");
+fs.readFile('C:\\Users\\Gebruiker\\Documents\\homework\\_mbo\\Kaya.js\\docs\\tests\\advanced.spl', 'utf8', (err, data) => {
+    if (err) {
+        console.error('error reading the file:', err);
+        return;
+    }
+    console.log(data);
+    console.log(utils.subCompile(data));
+});
 // utils.deepLog(new LineData("ext::get_value1()*1|ext::get_value2()*2|ext::writel(*1,*2);")); // compiled linedata
 // // utils.evaluate(new LineData("ext::get_value1()*1|ext::get_value2()*2|ext::writel(*1,*2);"), [
 // //     require("./spellbooks/example.book.js"),
