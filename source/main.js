@@ -7,6 +7,16 @@ const bigEvalInstance = new BigEval();
 const debugStream = new AsitDebugStream(undefined, "KAYA.JS<>PLAYGROUND");
 // const namespace_ext = require("./spellbooks/example.book.js");
 
+const testEnviroment = {
+    spellbooks: [
+        require("./spellbooks/example.book.js"),
+    ],
+    initialArgs: [
+        "hello",
+        "ahoy",
+    ],
+};
+
 /**
  * A parameter depending on memory.
  */
@@ -16,13 +26,8 @@ class MemoryParameter {
     }
 }
 /**
- * A header of a Spellscipt Section/function.
+ * The base class for evaluable spell (sub) scipts. Abstract.
  */
-class SectionHeader {
-    constructor(str) {
-
-    }
-}
 class SplEvaluable {
     constructor() {
         if (this.constructor == SplEvaluable) {
@@ -30,7 +35,7 @@ class SplEvaluable {
         }
     }
     /** 
-     * Evaluate this splscript. (snipped)
+     * Evaluate this splscript.
     */
     evaluate(spellbooks = [], memorySize = 16) {
         utils.evaluate(this, spellbooks, memorySize)
@@ -62,6 +67,40 @@ class SpellScipt extends SplEvaluable {
         // console.log(this.subCompiled);
     }
 }
+class TaskData extends SplEvaluable { // like a "function" but this sounds way better and more "grand".
+    constructor(str) {
+        super();
+        /** @type {string} */ this.callName;
+        /** @type {LineData[]} */ this.lines;
+        /** @type {string[]} */ this.expectedArgs;
+        /** @type {string} */ this.returnType;
+        /** @type {string} */this.source = str;
+
+        const typeMatchRegex = /^<.+?>/;
+        const callNameMatchRegex = /^.*\(/;
+        const argsStringMatchRegex = /\(.*\)$/;
+
+        debugStream.log("casting subcompiled spl.TaskData from \"" + (str.length > 50 ? "[TO_LONG_STRING]" : str) + "\"..");
+
+        debugStream.log("getting headerLine and subvariables..");
+        let headerLine = str.substring(0, str.indexOf("\n") === -1 ? undefined : str.indexOf("\n"));
+        if (!headerLine.startsWith("<HEADER>")) throw new Error("task does not start with a header.");
+        headerLine = headerLine.substring(8);
+
+        this.returnType = headerLine.match(typeMatchRegex)[0].slice(1, -1).toLowerCase();
+        this.callName = headerLine.replace("<" + this.returnType + ">", utils.STRING_EMPTY).match(callNameMatchRegex)[0].slice(0, -1);
+        let argsString = headerLine.slice(0, -1).match(argsStringMatchRegex)[0].slice(1, -1);
+        this.expectedArgs = argsString.split(",").map(s => s.split("~")[0].toLowerCase());
+        this.lines = str.split("\n").slice(1).map(l => new LineData(l));
+
+        debugStream.log("headerline found. (internal, as): \"" + headerLine + "\".");
+        debugStream.log("returnType found. (as): \"" + this.returnType + "\".");
+        debugStream.log("callName found. (as): \"" + this.callName + "\".");
+        debugStream.log("argsString found. (internal, as): \"" + argsString + "\".");
+        debugStream.log("expectedArgs found. (as): ", 0, this.expectedArgs);
+        debugStream.log("lines found. (as): ", 0, this.lines.map(l => l.source));
+    }
+}
 /**
  * A single Spellscript "Line". A line is a region where the memory does not clear.
  */
@@ -72,38 +111,37 @@ class LineData extends SplEvaluable {
      */
     constructor(str) {
         super();
-        /** @type {Call[]} */ this.calls;
-        this.source = str;
+        /** @type {CallData[]} */ this.calls;
+        /** @type {string} */this.source = str;
 
-        debugStream.log("casting (subcompiled) spl.LineData from \"" + str + "\"..");
+        debugStream.log("casting subcompiled spl.LineData from \"" + str + "\"..");
 
         if (!this.source.endsWith(";")) throw new Error("missing \";\" while parsing linedata; \"" + str + "\".");
-
+        str = str.slice(6);
         let withTokenizedStrings = str;
         debugStream.log("splitting casts..");
         this.calls = withTokenizedStrings.slice(0, -1) // no need for the ";".
             .split("|")
-            .map(call => new Call(call));
+            .map(call => new CallData(call));
         debugStream.log("<splitting succes, " + this.calls.length + " calls created from \"" + this.source + "\".");
         debugStream.log("<spl.Call contruction/cast finished succesfully.");
     }
 }
 /**
- * Represents a single {@link Call} from a line. One line may have one or more calls, the {@link LineData}
+ * Represents a single {@link CallData} from a line. One line may have one or more calls, the {@link LineData}
  */
-class Call extends SplEvaluable {
+class CallData extends SplEvaluable {
     /**
      * @param {string} str
      */
     constructor(str) {
         super();
         /** @type {number | null} The memory pointer.*/ this.pointer;
-        /** @type {string} The namespace this {@link Call} calls to.*/ this.namespace;
+        /** @type {string} The namespace this {@link CallData} calls to.*/ this.namespace;
         /** @type {string} */ this.name;
         /** @type {!Object[]} The call arguments. May be an empty array if no arguments are given. */ this.args;
         /** @type {string} The source string. */ this.source;
-
-        this.source = str;
+        /** @type {string} */this.source = str;
 
         debugStream.log("casting (subcompiled) spl.Call from \"" + this.source + "\"..");
         const pointerRegex = /\*\d*$/g; // only supports "simple" pointers, this is why it needs to be subcompiled first.
@@ -113,7 +151,7 @@ class Call extends SplEvaluable {
         this.pointer = pointerMatch[0] == "NULL" ? null : Number(pointerMatch[0].substring(1));
         debugStream.log("<found: " + this.pointer);
 
-        if (this.pointer == 0) throw new Error();
+        if (this.pointer == 0) throw new Error("pointer can't be zero, memory starts from");
 
         debugStream.log("spl.Call.namespace/spl.Call.name..");
         const [fullFunc, argsStr] = str.replace(pointerRegex, utils.STRING_EMPTY).split("(", 2);
@@ -197,6 +235,9 @@ const utils = {
         debugStream.log("<succes (as): \"" + toret + "\".");
         return toret;
     },
+    /**
+     * @param {string} str 
+     */
     isSubCompiled(str) {
         return str.startsWith("<HEADER><");
     },
@@ -224,6 +265,9 @@ const utils = {
         };
         console.dir(recursiveDump(obj));
     },
+    /**
+     * @param {string} str 
+     */
     getLineType(str) {
         // const namespaceLessRegex = /^[^:]*:[^:]*$/g // matches (everything) if there is a <anychar>:<anychar>
         return this.sectionReturnTypes.some(s => str.toUpperCase().includes("<" + s + ">")) ? this.LineType.HEADER : this.LineType.LINE;
@@ -303,18 +347,21 @@ const utils = {
             .forEach(match => // to collapsed format replace() sequence.
                 subcompiled = subcompiled.replaceAtIndex(match.index, match[0].length, "*" + match[0].length)
             );
+        debugStream.log("<succes.");
+        debugStream.log("<subcompiling succes.");
         return subcompiled;
     },
     /**
-     * @param {LineData|SpellScipt|Call} splData
-     * @param {number} memorySize
-     * @param {Object[]} spellbooks
+     * Evaluate a Evaluable spellscipt. This requires set spellbooks, no default are provided.
+     * @param {LineData|SpellScipt|CallData} splData
+     * @param {number} memorySize The size of the memory.
+     * @param {Object[]} spellbooks An array of spellbooks, JS objects.
      * @returns {number} The error code or 1 if succes.
      */
-    evaluate(splData, spellbooks = [], memorySize = 16) {
+    evaluate(splData, spellbooks, memorySize = 16) {
         let memory = {};
-        if (spellbooks.length == 0) console.error("ERROR");
-        if (memorySize < 0) console.error("ERROR");
+        if (spellbooks.length == 0) throw new Error("no spellbooks given.");
+        if (memorySize < 0) console.error("memorySize cant be less than 0.");
         if (splData instanceof LineData) {
             splData.calls.forEach(c => {
                 const targetBook = spellbooks.find(item => item.namespace === c.namespace);
@@ -324,28 +371,33 @@ const utils = {
                 if (c.pointer !== null) memory[c.pointer - 1] = returnValue;
             });
         }
+        else if (splData instanceof SpellScipt) {
+            // splData.calls.forEach(c => {
+            //     const targetBook = spellbooks.find(item => item.namespace === c.namespace);
+            //     const returnValue = targetBook[c.name](...c.args.map(a =>
+            //         (a instanceof MemoryParameter) ? memory[a.pointer - 1] : a
+            //     ));
+            //     if (c.pointer !== null) memory[c.pointer - 1] = returnValue;
+            // });
+        }
     }
 }
 
-// let testSpl = null;
-// // new LineData("ext::get_value1()|ext::get_value1();");
-// fs.readFile('C:\\Users\\Gebruiker\\Documents\\homework\\_mbo\\Kaya.js\\docs\\tests\\advanced.spl', 'utf8', (err, data) => {
-//     if (err) {
-//         console.error('error reading the file:', err);
-//         return;
-//     }
-//     console.log(data);
-//     // console.log(utils.subCompile(data));
-//     testSpl = new SpellScipt(data);
-// });
-new LineData("ext::get_value1()*1|ext::get_value2()*2|ext::writel(*1,*2);").evaluate([
-    require("./spellbooks/example.book.js"),
-])
+let testSpl = null;
 
-// utils.deepLog(new LineData("ext::get_value1()*1|ext::get_value2()*2|ext::writel(*1,*2);")); // compiled linedata
-// // utils.evaluate(new LineData("ext::get_value1()*1|ext::get_value2()*2|ext::writel(*1,*2);"), [
-// //     require("./spellbooks/example.book.js"),
-// // ]);
-// utils.evaluate(new Call("ext::writel(\"Hello \",\"world!\")").asLine(), [
+fs.readFile("C:\\Users\\Gebruiker\\Documents\\homework\\_mbo\\Kaya.js\\docs\\tests\\advanced.spl", "utf8", (err, data) => {
+    if (err) {
+        console.error("error reading the file:", err);
+        return;
+    }
+    console.log(data);
+    // console.log(utils.subCompile(data));
+    new TaskData(utils.subCompile(data))
+    // testSpl = new SpellScipt(data);
+    // testSpl.evaluate([
+    //     require("./spellbooks/example.book.js"),
+    // ]);
+});
+// new LineData("ext::get_value1()*1|ext::get_value2()*2|ext::writel(*1,*2);").evaluate([
 //     require("./spellbooks/example.book.js"),
 // ]);

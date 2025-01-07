@@ -1,6 +1,6 @@
-<void>main(Int32~1): // entrypoint spl.
+<void>main(Int32~numIn, String~textIn): // entrypoint spl.
 	ext::writel("hello world!"); // gets nothing as the pointer is pointing to memory of the line above, this gets cleared after every line.
-	ext::writel(@1); // display the input variable. (given writel converts it to a string automatically)
+	ext::writel($1); // display the input variable. (given writel converts it to a string automatically)
 	// whiteline support of course.
 	ext::get_value1()*|ext::get_value2()*[1+1]|ext::writel(*, **);	// gets 2 values and displays them.
 	ext::writel(*); // gets nothing as the pointer is pointing to memory of the line above, this gets cleared after every line.
