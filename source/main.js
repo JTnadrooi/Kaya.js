@@ -7,16 +7,48 @@ const bigEvalInstance = new BigEval();
 const debugStream = new AsitDebugStream(undefined, "KAYA.JS<>PLAYGROUND");
 // const namespace_ext = require("./spellbooks/example.book.js");
 
+/**
+ * A parameter depending on memory.
+ */
+class MemoryParameter {
+    constructor(pointer) {
+        this.pointer = pointer;
+    }
+}
+/**
+ * A header of a Spellscipt Section/function.
+ */
+class SectionHeader {
+    constructor(str) {
 
-class SpellScipt {
+    }
+}
+class SplEvaluable {
+    constructor() {
+        if (this.constructor == SplEvaluable) {
+            throw new Error("abstract classes can't be instantiated.");
+        }
+    }
+    /** 
+     * Evaluate this splscript. (snipped)
+    */
+    evaluate(spellbooks = [], memorySize = 16) {
+        utils.evaluate(this, spellbooks, memorySize)
+    }
+}
+
+class SpellScipt extends SplEvaluable {
     /**
      * Initialize a new spellscipt from a (optionally subcompiled) string.
      * @param {string} str 
      */
     constructor(str) {
+        super();
+        /** @type {string} The subcompiled version of this spellscipt.*/ this.subCompiled;
+        this.subCompiled = utils.subCompile(str, true);
+
         // const stringRegex = /(["'])(?:(?=(\\?))\2.)*?\1/g
 
-        // /** @type {string} The subcompiled version of this spellscipt.*/ this.subCompiled;
 
         // let withTokenizedStrings = str;
         // str.match(stringRegex).forEach(s => {
@@ -33,12 +65,13 @@ class SpellScipt {
 /**
  * A single Spellscript "Line". A line is a region where the memory does not clear.
  */
-class LineData {
+class LineData extends SplEvaluable {
     /**
      * 
      * @param {string} str 
      */
     constructor(str) {
+        super();
         /** @type {Call[]} */ this.calls;
         this.source = str;
 
@@ -56,29 +89,14 @@ class LineData {
     }
 }
 /**
- * A parameter depending on memory.
- */
-class MemoryParameter {
-    constructor(pointer) {
-        this.pointer = pointer;
-    }
-}
-/**
- * A header of a Spellscipt Section/function.
- */
-class SectionHeader {
-    constructor(str) {
-
-    }
-}
-/**
  * Represents a single {@link Call} from a line. One line may have one or more calls, the {@link LineData}
  */
-class Call {
+class Call extends SplEvaluable {
     /**
      * @param {string} str
      */
     constructor(str) {
+        super();
         /** @type {number | null} The memory pointer.*/ this.pointer;
         /** @type {string} The namespace this {@link Call} calls to.*/ this.namespace;
         /** @type {string} */ this.name;
@@ -308,15 +326,22 @@ const utils = {
         }
     }
 }
-// new LineData("ext::get_value1()|ext::get_value1();");
-fs.readFile('C:\\Users\\Gebruiker\\Documents\\homework\\_mbo\\Kaya.js\\docs\\tests\\advanced.spl', 'utf8', (err, data) => {
-    if (err) {
-        console.error('error reading the file:', err);
-        return;
-    }
-    console.log(data);
-    console.log(utils.subCompile(data));
-});
+
+// let testSpl = null;
+// // new LineData("ext::get_value1()|ext::get_value1();");
+// fs.readFile('C:\\Users\\Gebruiker\\Documents\\homework\\_mbo\\Kaya.js\\docs\\tests\\advanced.spl', 'utf8', (err, data) => {
+//     if (err) {
+//         console.error('error reading the file:', err);
+//         return;
+//     }
+//     console.log(data);
+//     // console.log(utils.subCompile(data));
+//     testSpl = new SpellScipt(data);
+// });
+new LineData("ext::get_value1()*1|ext::get_value2()*2|ext::writel(*1,*2);").evaluate([
+    require("./spellbooks/example.book.js"),
+])
+
 // utils.deepLog(new LineData("ext::get_value1()*1|ext::get_value2()*2|ext::writel(*1,*2);")); // compiled linedata
 // // utils.evaluate(new LineData("ext::get_value1()*1|ext::get_value2()*2|ext::writel(*1,*2);"), [
 // //     require("./spellbooks/example.book.js"),
