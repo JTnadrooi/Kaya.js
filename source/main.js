@@ -1,6 +1,5 @@
 const fs = require("fs");
 const BigEval = require("bigeval");
-const Enumerable = require("linq");
 const AsitDebugStream = require("../lib/asitdebug.js");
 
 const bigEvalInstance = new BigEval();
@@ -17,7 +16,7 @@ const testEnviroment = {
         require("./spellbooks/example.book.js"),
     ],
     initialArgs: [
-        "hello",
+        1,
         "ahoy",
     ],
     memory: new Array(16).fill(null),
@@ -27,11 +26,6 @@ const testEnviroment = {
  * A parameter depending on memory.
  */
 class MemoryParameter {
-    constructor(pointer) {
-        this.pointer = pointer;
-    }
-}
-class TaskMemoryParameter {
     constructor(pointer) {
         this.pointer = pointer;
     }
@@ -85,11 +79,16 @@ class SpellScipt extends SplEvaluable {
     }
 }
 class TaskData extends SplEvaluable { // like a "function" but this sounds way better and more "grand".
+    /**
+     * 
+     * @param {string} str 
+     */
     constructor(str) {
         super();
         /** @type {string} */ this.callName;
         /** @type {LineData[]} */ this.lines;
         /** @type {string[]} */ this.expectedArgs;
+        /** @type {MemoryParameter} */ this.argsPointers;
         /** @type {string} */ this.returnType;
         /** @type {string} */this.source = str;
 
@@ -110,6 +109,15 @@ class TaskData extends SplEvaluable { // like a "function" but this sounds way b
         this.expectedArgs = argsString.split(",").map(s => s.split("~")[0].toLowerCase());
         this.lines = str.split("\n").slice(1).map(l => new LineData(l));
 
+        [this.expectedArgs, this.argsPointers] = argsString
+            .split(",")
+            .map(s => s.split("~").map(part => part.toLowerCase()))
+            .reduce(([arr1, arr2], [arg1, arg2]) =>
+                ([arr1.concat(arg1), arr2.concat(arg2)]),
+                [[], []]); // I really did not want to call the map function twice..
+        this.argsPointers = this.argsPointers.map(p => new MemoryParameter(+p));
+
+
         debugStream.log("headerline found. (internal, as): \"" + headerLine + "\".");
         debugStream.log("returnType found. (as): \"" + this.returnType + "\".");
         debugStream.log("callName found. (as): \"" + this.callName + "\".");
@@ -117,6 +125,13 @@ class TaskData extends SplEvaluable { // like a "function" but this sounds way b
         debugStream.log("expectedArgs found. (as): ", 0, this.expectedArgs);
         debugStream.log("lines found. (as): ", 0, this.lines.map(l => l.source));
         debugStream.log("<succes.");
+    }
+
+    evaluate(splEnvironment) {
+        splEnvironment.initialArgs.forEach((a, i) => {
+            splEnvironment.memory[i] = a;
+        });
+        super.evaluate(splEnvironment);
     }
 }
 /**
@@ -196,7 +211,13 @@ class CallData extends SplEvaluable {
  * @this {string} The string that the method is called on.
  */
 String.prototype.splitSafe = function (delimiter) {
-    return this.indexOf(delimiter) === -1 ? [this] : this.split(delimiter);
+    if (this.length == 0) {
+        return [];
+    }
+    if (this.indexOf(delimiter) === -1) {
+        return [this];
+    }
+    else return this.split(delimiter);
 };
 String.prototype.replaceAtIndex = function (index, length, replacement) {
     if (index < 0 || index >= this.length || length < 0) throw new RangeError("Invalid index or length for replacement.");
@@ -226,7 +247,6 @@ const utils = {
         else if (str.toLowerCase() === "true") return true;
         else if (str.toLowerCase() === "false") return false;
         else if (str.startsWith("*")) return new MemoryParameter(+(str.substring(1)));
-        else if (str.startsWith("$")) return new TaskMemoryParameter(+(str.substring(1)));
 
         const temp = bigEvalInstance.exec(str); // a bit slow to do this so often.
         if (temp !== "ERROR") return temp;
@@ -379,7 +399,7 @@ const utils = {
     evaluate(splData, splEnvironment) {
         let memory = {};
 
-        debugStream.log("evanuating splData of type; " + splData.constructor.name + "..");
+        debugStream.log("evaluating splData of type; " + splData.constructor.name + "..");
 
         if (splEnvironment.spellbooks.length == 0) throw new Error("no spellbooks given.");
         if (splEnvironment.memorySize < 0) console.error("memorySize cant be less than 0.");
@@ -393,9 +413,10 @@ const utils = {
         //     });
         // }
         if (splData instanceof SpellScipt) {
-            splData.tasks.forEach(data => {
-                data.evaluate(splEnvironment);
-            });
+            // splData.tasks.forEach(data => {
+            //     data.evaluate(splEnvironment);
+            // });
+            splData.tasks.find(t => t.callName == "main").evaluate(splEnvironment);
         }
         if (splData instanceof TaskData) {
             splData.lines.forEach(data => {
@@ -409,7 +430,7 @@ const utils = {
         }
         if (splData instanceof CallData) {
             debugStream.log("(source: " + splData.source + ")");
-            debugStream.log("(args: " + splData.args + ")");
+            debugStream.log("(args: " + splData.args.map(x => x.constructor.name) + ")");
             const targetBook = splEnvironment.spellbooks.find(item => item.namespace === splData.namespace);
             const returnValue = targetBook[splData.name](...splData.args.map(a =>
                 (a instanceof MemoryParameter) ? splEnvironment.memory[a.pointer - 1] : a
@@ -440,11 +461,13 @@ fs.readFile("C:\\Users\\Gebruiker\\Documents\\homework\\_mbo\\Kaya.js\\docs\\tes
         console.error("error reading the file:", err);
         return;
     }
-    console.log(data);
-    // console.log(utils.subCompile(data));
-    new SpellScipt(utils.subCompile(data)).evaluate(testEnviroment);
+    // console.log(data);
+    console.log(utils.subCompile(data));
+    new SpellScipt(data).evaluate(testEnviroment);
     // testSpl = new SpellScipt(data);
     // testSpl.evaluate([
     //     require("./spellbooks/example.book.js"),
     // ]);
 });
+
+utils.deepLog(testEnviroment.memory);
