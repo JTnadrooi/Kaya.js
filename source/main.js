@@ -20,13 +20,18 @@ const testEnviroment = {
         "hello",
         "ahoy",
     ],
-    memorySize: 10,
+    memory: new Array(16).fill(null),
 };
 
 /**
  * A parameter depending on memory.
  */
 class MemoryParameter {
+    constructor(pointer) {
+        this.pointer = pointer;
+    }
+}
+class TaskMemoryParameter {
     constructor(pointer) {
         this.pointer = pointer;
     }
@@ -111,6 +116,7 @@ class TaskData extends SplEvaluable { // like a "function" but this sounds way b
         debugStream.log("argsString found. (internal, as): \"" + argsString + "\".");
         debugStream.log("expectedArgs found. (as): ", 0, this.expectedArgs);
         debugStream.log("lines found. (as): ", 0, this.lines.map(l => l.source));
+        debugStream.log("<succes.");
     }
 }
 /**
@@ -190,7 +196,7 @@ class CallData extends SplEvaluable {
  * @this {string} The string that the method is called on.
  */
 String.prototype.splitSafe = function (delimiter) {
-    return this.indexOf(delimiter) === -1 ? [] : this.split(delimiter);
+    return this.indexOf(delimiter) === -1 ? [this] : this.split(delimiter);
 };
 String.prototype.replaceAtIndex = function (index, length, replacement) {
     if (index < 0 || index >= this.length || length < 0) throw new RangeError("Invalid index or length for replacement.");
@@ -216,10 +222,11 @@ const utils = {
         debugStream.log("attempting dynamic cast of string: \"" + str + "\".");
 
         if (str.match(stringRegex)) throw new Error("strings cannot have double quotes, these should already be filtered out.");
-        else if (str.endsWith("=")) return detokenize(str);
+        else if (str.endsWith("=")) return this.detokenize(str);
         else if (str.toLowerCase() === "true") return true;
         else if (str.toLowerCase() === "false") return false;
         else if (str.startsWith("*")) return new MemoryParameter(+(str.substring(1)));
+        else if (str.startsWith("$")) return new TaskMemoryParameter(+(str.substring(1)));
 
         const temp = bigEvalInstance.exec(str); // a bit slow to do this so often.
         if (temp !== "ERROR") return temp;
@@ -371,26 +378,45 @@ const utils = {
      */
     evaluate(splData, splEnvironment) {
         let memory = {};
+
+        debugStream.log("evanuating splData of type; " + splData.constructor.name + "..");
+
         if (splEnvironment.spellbooks.length == 0) throw new Error("no spellbooks given.");
         if (splEnvironment.memorySize < 0) console.error("memorySize cant be less than 0.");
-        if (splData instanceof LineData) {
-            splData.calls.forEach(c => {
-                const targetBook = splEnvironment.spellbooks.find(item => item.namespace === c.namespace);
-                const returnValue = targetBook[c.name](...c.args.map(a =>
-                    (a instanceof MemoryParameter) ? memory[a.pointer - 1] : a
-                ));
-                if (c.pointer !== null) memory[c.pointer - 1] = returnValue;
+        // if (splData instanceof LineData) {
+        //     splData.calls.forEach(c => {
+        //         const targetBook = splEnvironment.spellbooks.find(item => item.namespace === c.namespace);
+        //         const returnValue = targetBook[c.name](...c.args.map(a =>
+        //             (a instanceof MemoryParameter) ? memory[a.pointer - 1] : a
+        //         ));
+        //         if (c.pointer !== null) memory[c.pointer - 1] = returnValue;
+        //     });
+        // }
+        if (splData instanceof SpellScipt) {
+            splData.tasks.forEach(data => {
+                data.evaluate(splEnvironment);
             });
         }
-        else if (splData instanceof SpellScipt) {
-            // splData.calls.forEach(c => {
-            //     const targetBook = spellbooks.find(item => item.namespace === c.namespace);
-            //     const returnValue = targetBook[c.name](...c.args.map(a =>
-            //         (a instanceof MemoryParameter) ? memory[a.pointer - 1] : a
-            //     ));
-            //     if (c.pointer !== null) memory[c.pointer - 1] = returnValue;
-            // });
+        if (splData instanceof TaskData) {
+            splData.lines.forEach(data => {
+                data.evaluate(splEnvironment);
+            });
         }
+        if (splData instanceof LineData) {
+            splData.calls.forEach(data => {
+                data.evaluate(splEnvironment);
+            });
+        }
+        if (splData instanceof CallData) {
+            debugStream.log("(source: " + splData.source + ")");
+            debugStream.log("(args: " + splData.args + ")");
+            const targetBook = splEnvironment.spellbooks.find(item => item.namespace === splData.namespace);
+            const returnValue = targetBook[splData.name](...splData.args.map(a =>
+                (a instanceof MemoryParameter) ? splEnvironment.memory[a.pointer - 1] : a
+            ));
+            if (splData.pointer !== null) splEnvironment.memory[splData.pointer - 1] = returnValue;
+        }
+        debugStream.log("<succes.");
     }
 }
 
@@ -407,6 +433,8 @@ const utils = {
 
 let testSpl = null;
 
+debugStream.silent = false;
+
 fs.readFile("C:\\Users\\Gebruiker\\Documents\\homework\\_mbo\\Kaya.js\\docs\\tests\\advanced.spl", "utf8", (err, data) => {
     if (err) {
         console.error("error reading the file:", err);
@@ -414,12 +442,9 @@ fs.readFile("C:\\Users\\Gebruiker\\Documents\\homework\\_mbo\\Kaya.js\\docs\\tes
     }
     console.log(data);
     // console.log(utils.subCompile(data));
-    new SpellScipt(utils.subCompile(data))
+    new SpellScipt(utils.subCompile(data)).evaluate(testEnviroment);
     // testSpl = new SpellScipt(data);
     // testSpl.evaluate([
     //     require("./spellbooks/example.book.js"),
     // ]);
 });
-// new LineData("ext::get_value1()*1|ext::get_value2()*2|ext::writel(*1,*2);").evaluate([
-//     require("./spellbooks/example.book.js"),
-// ]);
