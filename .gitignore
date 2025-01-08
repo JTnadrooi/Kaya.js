@@ -1,4 +1,5 @@
 .vscode/
+.scripts/
 .ignore/
 *.ignore
 node_modules/

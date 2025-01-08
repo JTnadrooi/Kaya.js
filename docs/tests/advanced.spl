@@ -4,4 +4,3 @@
 	// whiteline support of course.
 	ext::get_value1()*|ext::get_value2()*[1+1]|ext::writel(*, **);	// gets 2 values and displays them.
 	ext::writel(*); // gets nothing as the pointer is pointing to memory of the line above, this gets cleared after every line.
-	

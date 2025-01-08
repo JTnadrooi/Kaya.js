@@ -7,6 +7,11 @@ const bigEvalInstance = new BigEval();
 const debugStream = new AsitDebugStream(undefined, "KAYA.JS<>PLAYGROUND");
 // const namespace_ext = require("./spellbooks/example.book.js");
 
+/**
+ * @typedef {Object} SplEnvironment
+ * @property {Object[]} spellbooks - A list of spellbook objects, each containing functions or methods.
+ * @property {number} memorySize - The size of the memory; must be a non-negative number.
+ */
 const testEnviroment = {
     spellbooks: [
         require("./spellbooks/example.book.js"),
@@ -15,6 +20,7 @@ const testEnviroment = {
         "hello",
         "ahoy",
     ],
+    memorySize: 10,
 };
 
 /**
@@ -37,8 +43,8 @@ class SplEvaluable {
     /** 
      * Evaluate this splscript.
     */
-    evaluate(spellbooks = [], memorySize = 16) {
-        utils.evaluate(this, spellbooks, memorySize)
+    evaluate(splEnvironment) {
+        utils.evaluate(this, splEnvironment)
     }
 }
 
@@ -49,8 +55,14 @@ class SpellScipt extends SplEvaluable {
      */
     constructor(str) {
         super();
-        /** @type {string} The subcompiled version of this spellscipt.*/ this.subCompiled;
-        this.subCompiled = utils.subCompile(str, true);
+        /** @type {string} The subcompiled version of this spellscipt.*/ this.source;
+        /** @type {TaskData[]} The subcompiled version of this spellscipt.*/ this.tasks;
+        let subCompiled = utils.subCompile(str, true);
+        this.tasks = subCompiled.split('\n').reduce((sections, line) => {
+            if (line.startsWith("<void>")) sections.push([]);
+            sections[sections.length - 1].push(line);
+            return sections;
+        }, [[]]).map(section => section.join('\n')).map(m => new TaskData(m));
 
         // const stringRegex = /(["'])(?:(?=(\\?))\2.)*?\1/g
 
@@ -354,17 +366,16 @@ const utils = {
     /**
      * Evaluate a Evaluable spellscipt. This requires set spellbooks, no default are provided.
      * @param {LineData|SpellScipt|CallData} splData
-     * @param {number} memorySize The size of the memory.
-     * @param {Object[]} spellbooks An array of spellbooks, JS objects.
+     * @param {SplEnvironment} splEnvironment
      * @returns {number} The error code or 1 if succes.
      */
-    evaluate(splData, spellbooks, memorySize = 16) {
+    evaluate(splData, splEnvironment) {
         let memory = {};
-        if (spellbooks.length == 0) throw new Error("no spellbooks given.");
-        if (memorySize < 0) console.error("memorySize cant be less than 0.");
+        if (splEnvironment.spellbooks.length == 0) throw new Error("no spellbooks given.");
+        if (splEnvironment.memorySize < 0) console.error("memorySize cant be less than 0.");
         if (splData instanceof LineData) {
             splData.calls.forEach(c => {
-                const targetBook = spellbooks.find(item => item.namespace === c.namespace);
+                const targetBook = splEnvironment.spellbooks.find(item => item.namespace === c.namespace);
                 const returnValue = targetBook[c.name](...c.args.map(a =>
                     (a instanceof MemoryParameter) ? memory[a.pointer - 1] : a
                 ));
@@ -383,6 +394,17 @@ const utils = {
     }
 }
 
+
+// const readline = require('readline');
+// const rl = readline.createInterface({
+//     input: process.stdin,
+//     output: process.stdout
+// });
+// rl.question('Enter Your Name: ', (input) => {
+//     console.log(`Your Name is : ${input}`);
+//     rl.close();
+// });
+
 let testSpl = null;
 
 fs.readFile("C:\\Users\\Gebruiker\\Documents\\homework\\_mbo\\Kaya.js\\docs\\tests\\advanced.spl", "utf8", (err, data) => {
@@ -392,7 +414,7 @@ fs.readFile("C:\\Users\\Gebruiker\\Documents\\homework\\_mbo\\Kaya.js\\docs\\tes
     }
     console.log(data);
     // console.log(utils.subCompile(data));
-    new TaskData(utils.subCompile(data))
+    new SpellScipt(utils.subCompile(data))
     // testSpl = new SpellScipt(data);
     // testSpl.evaluate([
     //     require("./spellbooks/example.book.js"),
