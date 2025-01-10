@@ -1,4 +1,3 @@
-const fs = require("fs");
 const BigEval = require("bigeval");
 const AsitDebugStream = require("../lib/asitdebug.js");
 
@@ -42,8 +41,8 @@ class SplEvaluable {
     /** 
      * Evaluate this splscript.
     */
-    evaluate(splEnvironment) {
-        utils.evaluate(this, splEnvironment)
+    async evaluate(splEnvironment) {
+        await utils.evaluate(this, splEnvironment)
     }
 }
 
@@ -127,11 +126,11 @@ class TaskData extends SplEvaluable { // like a "function" but this sounds way b
         debugStream.log("<succes.");
     }
 
-    evaluate(splEnvironment) {
+    async evaluate(splEnvironment) {
         splEnvironment.initialArgs.forEach((a, i) => {
             splEnvironment.memory[i] = a;
         });
-        super.evaluate(splEnvironment);
+        await super.evaluate(splEnvironment);
     }
 }
 /**
@@ -375,11 +374,11 @@ const utils = {
             .map(line => "<" + this.getLineType(line) + ">" + line)
             .join("\n");
         debugStream.log("<succes.");
-        debugStream.log("evaluating expressions..");
-        subcompiled.match(evalRegex).forEach(rm => // evaluate constant [] expressions.
-            subcompiled = subcompiled.replace(rm, bigEvalInstance.exec(rm.slice(1, -1)))
-        );
-        debugStream.log("<succes.");
+        // debugStream.log("evaluating expressions..");
+        // subcompiled.match(evalRegex).forEach(rm => // evaluate constant [] expressions.
+        //     subcompiled = subcompiled.replace(rm, bigEvalInstance.exec(rm.slice(1, -1)))
+        // );
+        // debugStream.log("<succes.");
         debugStream.log("normalizing pointers..");
         [...subcompiled.matchAll(numericRegex)]
             .reverse() // from back to front to prevent index-shifting.
@@ -391,83 +390,68 @@ const utils = {
         return subcompiled;
     },
     /**
-     * Evaluate a Evaluable spellscipt. This requires set spellbooks, no default are provided.
+     * Evaluate an Evaluable spellscript. This requires set spellbooks, no defaults are provided.
      * @param {LineData|SpellScipt|CallData} splData
      * @param {SplEnvironment} splEnvironment
-     * @returns {number} The error code or 1 if succes.
+     * @returns {number} The error code or 1 if success.
      */
-    evaluate(splData, splEnvironment) {
+    async evaluate(splData, splEnvironment) {
         let memory = {};
 
         debugStream.log("evaluating splData of type; " + splData.constructor.name + "..");
 
-        if (splEnvironment.spellbooks.length == 0) throw new Error("no spellbooks given.");
-        if (splEnvironment.memorySize < 0) console.error("memorySize cant be less than 0.");
-        // if (splData instanceof LineData) {
-        //     splData.calls.forEach(c => {
-        //         const targetBook = splEnvironment.spellbooks.find(item => item.namespace === c.namespace);
-        //         const returnValue = targetBook[c.name](...c.args.map(a =>
-        //             (a instanceof MemoryParameter) ? memory[a.pointer - 1] : a
-        //         ));
-        //         if (c.pointer !== null) memory[c.pointer - 1] = returnValue;
-        //     });
-        // }
+        if (splEnvironment.spellbooks.length === 0) throw new Error("no spellbooks given.");
+        if (splEnvironment.memorySize < 0) console.error("memorySize can't be less than 0.");
+
         if (splData instanceof SpellScipt) {
-            // splData.tasks.forEach(data => {
-            //     data.evaluate(splEnvironment);
-            // });
-            splData.tasks.find(t => t.callName == "main").evaluate(splEnvironment);
+            const mainTask = splData.tasks.find(t => t.callName == "main");
+            if (mainTask) await mainTask.evaluate(splEnvironment);
         }
+
         if (splData instanceof TaskData) {
-            splData.lines.forEach(data => {
-                data.evaluate(splEnvironment);
-            });
+            for (const data of splData.lines) {
+                await data.evaluate(splEnvironment);
+            }
         }
+
         if (splData instanceof LineData) {
-            splData.calls.forEach(data => {
-                data.evaluate(splEnvironment);
-            });
+            for (const data of splData.calls) {
+                await data.evaluate(splEnvironment);
+            }
         }
+
         if (splData instanceof CallData) {
             debugStream.log("(source: " + splData.source + ")");
             debugStream.log("(args: " + splData.args.map(x => x.constructor.name) + ")");
+
             const targetBook = splEnvironment.spellbooks.find(item => item.namespace === splData.namespace);
-            const returnValue = targetBook[splData.name](...splData.args.map(a =>
+            let returnValue = targetBook[splData.name](...splData.args.map(a =>
                 (a instanceof MemoryParameter) ? splEnvironment.memory[a.pointer - 1] : a
             ));
+
+            if (returnValue instanceof Promise) {
+                debugStream.log("returns promise, awaiting..");
+                returnValue = await returnValue;
+                debugStream.log("<awaiting succes.");
+            }
             if (splData.pointer !== null) splEnvironment.memory[splData.pointer - 1] = returnValue;
         }
-        debugStream.log("<succes.");
+
+        debugStream.log("<success; " + splData.constructor.name);
     }
+
 }
 
 
-// const readline = require('readline');
-// const rl = readline.createInterface({
-//     input: process.stdin,
-//     output: process.stdout
-// });
-// rl.question('Enter Your Name: ', (input) => {
-//     console.log(`Your Name is : ${input}`);
-//     rl.close();
-// });
-
-let testSpl = null;
-
-debugStream.silent = false;
-
-fs.readFile("C:\\Users\\Gebruiker\\Documents\\homework\\_mbo\\Kaya.js\\docs\\tests\\advanced.spl", "utf8", (err, data) => {
-    if (err) {
-        console.error("error reading the file:", err);
-        return;
+debugStream.silent = true;
+const fs = require("fs").promises;
+(async () => {
+    try {
+        const data = await fs.readFile("C:\\Users\\Gebruiker\\Documents\\homework\\_mbo\\Kaya.js\\docs\\tests\\readline.spl", "utf8");
+        console.log(utils.subCompile(data));
+        await new SpellScipt(data).evaluate(testEnviroment);
+    } catch (err) {
+        console.error("Error reading the file:", err);
     }
-    // console.log(data);
-    console.log(utils.subCompile(data));
-    new SpellScipt(data).evaluate(testEnviroment);
-    // testSpl = new SpellScipt(data);
-    // testSpl.evaluate([
-    //     require("./spellbooks/example.book.js"),
-    // ]);
-});
-
-utils.deepLog(testEnviroment.memory);
+    utils.deepLog(testEnviroment.memory);
+})();
