@@ -443,15 +443,11 @@ const utils = {
 }
 
 
-debugStream.silent = true;
+debugStream.silent = false;
 const fs = require("fs").promises;
 (async () => {
-    try {
-        const data = await fs.readFile("C:\\Users\\Gebruiker\\Documents\\homework\\_mbo\\Kaya.js\\docs\\tests\\readline.spl", "utf8");
-        console.log(utils.subCompile(data));
-        await new SpellScipt(data).evaluate(testEnviroment);
-    } catch (err) {
-        console.error("Error reading the file:", err);
-    }
+    const data = await fs.readFile("docs\\tests\\readline.spl", "utf8");
+    console.log(utils.subCompile(data));
+    await new SpellScipt(data).evaluate(testEnviroment);
     utils.deepLog(testEnviroment.memory);
 })();

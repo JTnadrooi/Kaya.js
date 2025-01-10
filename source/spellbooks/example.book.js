@@ -21,7 +21,7 @@ module.exports = {
                 input: process.stdin,
                 output: process.stdout,
             });
-            rl.question("Please enter something: ", (answer) => {
+            rl.question(STRING_EMPTY, (answer) => {
                 rl.close();
                 resolve(answer);
             });
