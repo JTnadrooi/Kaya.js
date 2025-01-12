@@ -1,0 +1,14 @@
+<void>main(): // entrypoint spl.
+	ext::writel("starting questions!");
+    q::start();
+	q::ask("what letter comes after a?")*|ext::equals(*, "b")*|q::validate(*);
+	q::ask("what is 8*8?")*|ext::equals(*, "64")*|q::validate(*);
+	q::ask("what is highest value for unsigned bytes?")*|ext::equals(*, "255")*|q::validate(*);
+	q::ask("what is the chemical formula of phosphophyllite?")*|ext::equals(*, "Zn2Fe(PO4)2.4H2O")*|q::validate(*);
+	q::ask("what is ln(12)? no calculator, 2 decimals.")*|ext::equals(*, "2.48")*|q::validate(*);
+	q::ask("how do you spell suspicious?")*|ext::equals_or(*, "suspicious", "sus")*|q::validate(*); // tough one.
+	q::ask("what is the half life of uranium-235? (in millions of years.)")*|ext::equals(*, "700")*|q::validate(*);
+	q::ask("how are images consisting of two colors called?")*|ext::equals_or(*, "bichromatic", "duotone")*|q::validate(*);
+    q::ask("what is the smallest prime number?")*|ext::equals(*, "2")*|q::validate(*);
+    q::ask("does the N in DNA stand for &?")*|ext::equals(*, "no")*|q::validate(*);
+	q::end()*|ext::writel("questions ended, amount correct (out of 10): ", *);

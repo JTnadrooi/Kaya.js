@@ -1,9 +1,6 @@
-const BigEval = require("bigeval");
 const AsitDebugStream = require("../lib/asitdebug.js");
 
-const bigEvalInstance = new BigEval();
 const debugStream = new AsitDebugStream(undefined, "KAYA.JS<>PLAYGROUND");
-// const namespace_ext = require("./spellbooks/example.book.js");
 
 /**
  * @typedef {Object} SplEnvironment
@@ -13,10 +10,11 @@ const debugStream = new AsitDebugStream(undefined, "KAYA.JS<>PLAYGROUND");
 const testEnviroment = {
     spellbooks: [
         require("./spellbooks/example.book.js"),
+        require("./spellbooks/question.book.js"),
     ],
     initialArgs: [
-        1,
-        "ahoy",
+        // 1,
+        // "ahoy",
     ],
     memory: new Array(16).fill(null),
 };
@@ -61,20 +59,6 @@ class SpellScript extends SplEvaluable {
             sections[sections.length - 1].push(line);
             return sections;
         }, [[]]).map(section => section.join('\n')).map(m => new TaskData(m));
-
-        // const stringRegex = /(["'])(?:(?=(\\?))\2.)*?\1/g
-
-
-        // let withTokenizedStrings = str;
-        // str.match(stringRegex).forEach(s => {
-        //     const noQuotes = s.slice(1, -1);
-        //     withTokenizedStrings = withTokenizedStrings.replace(s, utils.tokenize(noQuotes));
-        //     console.log("tokenizing line strings; " + noQuotes + " to " + utils.tokenize(noQuotes));
-        // });
-
-        // this.subCompiled = withTokenizedStrings;
-
-        // console.log(this.subCompiled);
     }
 }
 class TaskData extends SplEvaluable { // like a "function" but this sounds way better and more "grand".
@@ -443,17 +427,17 @@ debugStream.silent = true;
 const fsPromises = require("fs").promises;
 (async () => {
     try {
-        const data = await fsPromises.readFile("docs\\tests\\readline.spl", "utf8");
+        const data = await fsPromises.readFile("docs\\tests\\question.spl", "utf8");
         await new SpellScript(data).evaluate(testEnviroment);
-        console.log(utils.subCompile(data));
-        utils.deepLog(testEnviroment.memory);
-        
+
+        // console.log(utils.subCompile(data));
+        // utils.deepLog(testEnviroment.memory);
+
         testEnviroment.spellbooks[0].close();
+        testEnviroment.spellbooks[1].close();
     } catch (err) {
-        console.error("Error occurred:", err);
+        console.error("error occurred:", err);
     }
     return;
 })();
-console.log("ayo");
-
 return;
