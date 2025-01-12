@@ -46,7 +46,7 @@ class SplEvaluable {
     }
 }
 
-class SpellScipt extends SplEvaluable {
+class SpellScript extends SplEvaluable {
     /**
      * Initialize a new spellscipt from a (optionally subcompiled) string.
      * @param {string} str 
@@ -391,7 +391,7 @@ const utils = {
     },
     /**
      * Evaluate an Evaluable spellscript. This requires set spellbooks, no defaults are provided.
-     * @param {LineData|SpellScipt|CallData} splData
+     * @param {LineData|SpellScript|CallData} splData
      * @param {SplEnvironment} splEnvironment
      * @returns {number} The error code or 1 if success.
      */
@@ -403,7 +403,7 @@ const utils = {
         if (splEnvironment.spellbooks.length === 0) throw new Error("no spellbooks given.");
         if (splEnvironment.memorySize < 0) console.error("memorySize can't be less than 0.");
 
-        if (splData instanceof SpellScipt) {
+        if (splData instanceof SpellScript) {
             const mainTask = splData.tasks.find(t => t.callName == "main");
             if (mainTask) await mainTask.evaluate(splEnvironment);
         }
@@ -436,18 +436,24 @@ const utils = {
             }
             if (splData.pointer !== null) splEnvironment.memory[splData.pointer - 1] = returnValue;
         }
-
         debugStream.log("<success; " + splData.constructor.name);
     }
-
 }
-
-
-debugStream.silent = false;
-const fs = require("fs").promises;
+debugStream.silent = true;
+const fsPromises = require("fs").promises;
 (async () => {
-    const data = await fs.readFile("docs\\tests\\readline.spl", "utf8");
-    console.log(utils.subCompile(data));
-    await new SpellScipt(data).evaluate(testEnviroment);
-    utils.deepLog(testEnviroment.memory);
+    try {
+        const data = await fsPromises.readFile("docs\\tests\\readline.spl", "utf8");
+        await new SpellScript(data).evaluate(testEnviroment);
+        console.log(utils.subCompile(data));
+        utils.deepLog(testEnviroment.memory);
+        
+        testEnviroment.spellbooks[0].close();
+    } catch (err) {
+        console.error("Error occurred:", err);
+    }
+    return;
 })();
+console.log("ayo");
+
+return;

@@ -1,4 +1,3 @@
 <void>main(Int32~1, String~2): // entrypoint spl.
-	ext::writel("hello world!"); // gets nothing as the pointer is pointing to memory of the line above, this gets cleared after every line.
-	ext::readline()*1;
-    ext::writel(*);
+	ext::writel("What do you want to display?");
+	ext::readline()*|ext::writel(*); // awaits user input and displays it.

@@ -22,7 +22,6 @@ module.exports = {
                 output: process.stdout,
             });
             rl.question(STRING_EMPTY, (answer) => {
-                rl.close();
                 resolve(answer);
             });
         });
@@ -30,5 +29,8 @@ module.exports = {
 
     writel(...parameters) {
         console.log(parameters.map(p => (p ?? STRING_EMPTY).toString()).join(STRING_EMPTY));
+    },
+    close() {
+        rl.close();
     },
 };
