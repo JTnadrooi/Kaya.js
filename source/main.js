@@ -440,4 +440,20 @@ const fsPromises = require("fs").promises;
     }
     return;
 })();
+
+// (async () => {
+//     try {
+//         const data = await fsPromises.readFile("docs\\tests\\if.spl", "utf8");
+//         // await new SpellScript(data).evaluate(testEnviroment);
+
+//         console.log(utils.subCompile(data));
+
+//         testEnviroment.spellbooks[0].close();
+//         testEnviroment.spellbooks[1].close();
+//     } catch (err) {
+//         console.error("error occurred:", err);
+//     }
+//     return;
+// })();
+
 return;
