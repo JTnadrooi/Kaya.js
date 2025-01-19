@@ -1,6 +1,4 @@
 <void>main(): // entrypoint spl.
-	ext::writel("hello world!"); // gets nothing as the pointer is pointing to memory of the line above, this gets cleared after every line.
-	ext::writel(*); // display the input variable. (given writel converts it to a string automatically)
-	// whiteline support of course.
-	ext::get_value1()*|ext::get_value2()**|ext::writel(*, *2);	// gets 2 values and displays them.
-	ext::writel(*); // gets nothing as the pointer is pointing to memory of the line above, this gets cleared after every line.
+	ext::writel("hello world!"); // displays "hello world" using the writel method from the ext namespace.
+	ext::get_value1()*|ext::get_value2()**|ext::writel(*, *2);	// gets 2 values and stores them inside the pointers, after which displays them using the same method as above.
+	ext::writel(*); // linememory does not get cleared after each line, this will display whatever value is returned by ext::get_value1().

@@ -1,3 +1,3 @@
 <void>main(): // entrypoint spl.
 	ext::writel("What do you want to display?");
-	ext::readline()*|ext::writel(*); // awaits user input and displays it.
+	ext::readline()*|ext::writel(*); // automatically awaits user input and displays it, no await keyword needed.
