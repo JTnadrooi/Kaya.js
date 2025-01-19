@@ -427,7 +427,7 @@ debugStream.silent = true;
 const fsPromises = require("fs").promises;
 (async () => {
     try {
-        const data = await fsPromises.readFile("docs\\tests\\question.spl", "utf8");
+        const data = await fsPromises.readFile("docs\\tests\\quiz.spl", "utf8");
         await new SpellScript(data).evaluate(testEnviroment);
 
         // console.log(utils.subCompile(data));
