@@ -1,11 +1,15 @@
-const AsitDebugStream = require("../lib/asitdebug.js");
+const DebugStream = require("../lib/asitdebug.js");
 
-const debugStream = new AsitDebugStream(undefined, "KAYA.JS<>PLAYGROUND");
+const debugStream = new DebugStream(undefined, "KAYA.JS<>PLAYGROUND");
 
 /**
  * @typedef {Object} SplEnvironment
  * @property {Object[]} spellbooks - A list of spellbook objects, each containing functions or methods.
  * @property {number} memorySize - The size of the memory; must be a non-negative number.
+ */
+
+/**
+ * @type {SplEnvironment}
  */
 const testEnviroment = {
     spellbooks: [
@@ -36,9 +40,10 @@ class SplEvaluable {
             throw new Error("abstract classes can't be instantiated.");
         }
     }
-    /** 
-     * Evaluate this splscript.
-    */
+    /**
+     * Evaluate this spellscript
+     * @param {SplEnvironment} splEnvironment
+     */
     async evaluate(splEnvironment) {
         await utils.evaluate(this, splEnvironment)
     }
@@ -97,7 +102,7 @@ class TaskData extends SplEvaluable { // like a "function" but this sounds way b
             .map(s => s.split("~").map(part => part.toLowerCase()))
             .reduce(([arr1, arr2], [arg1, arg2]) =>
                 ([arr1.concat(arg1), arr2.concat(arg2)]),
-                [[], []]); // I really did not want to call the map function twice..
+                [[], []]); // I really did not want to call the map function twice, I probably should've..
         this.argsPointers = this.argsPointers.map(p => new MemoryParameter(+p));
 
 
@@ -358,11 +363,6 @@ const utils = {
             .map(line => "<" + this.getLineType(line) + ">" + line)
             .join("\n");
         debugStream.log("<succes.");
-        // debugStream.log("evaluating expressions..");
-        // subcompiled.match(evalRegex).forEach(rm => // evaluate constant [] expressions.
-        //     subcompiled = subcompiled.replace(rm, bigEvalInstance.exec(rm.slice(1, -1)))
-        // );
-        // debugStream.log("<succes.");
         debugStream.log("normalizing pointers..");
         [...subcompiled.matchAll(numericRegex)]
             .reverse() // from back to front to prevent index-shifting.
@@ -377,7 +377,6 @@ const utils = {
      * Evaluate an Evaluable spellscript. This requires set spellbooks, no defaults are provided.
      * @param {LineData|SpellScript|CallData} splData
      * @param {SplEnvironment} splEnvironment
-     * @returns {number} The error code or 1 if success.
      */
     async evaluate(splData, splEnvironment) {
         let memory = {};
@@ -388,21 +387,15 @@ const utils = {
         if (splEnvironment.memorySize < 0) console.error("memorySize can't be less than 0.");
 
         if (splData instanceof SpellScript) {
-            const mainTask = splData.tasks.find(t => t.callName == "main");
+            const mainTask = splData.tasks.find(t => t.callName == "main"); // find main function
             if (mainTask) await mainTask.evaluate(splEnvironment);
         }
 
-        if (splData instanceof TaskData) {
-            for (const data of splData.lines) {
-                await data.evaluate(splEnvironment);
-            }
-        }
+        if (splData instanceof TaskData)
+            for (const data of splData.lines) await data.evaluate(splEnvironment);
 
-        if (splData instanceof LineData) {
-            for (const data of splData.calls) {
-                await data.evaluate(splEnvironment);
-            }
-        }
+        if (splData instanceof LineData)
+            for (const data of splData.calls) await data.evaluate(splEnvironment);
 
         if (splData instanceof CallData) {
             debugStream.log("(source: " + splData.source + ")");
@@ -421,39 +414,29 @@ const utils = {
             if (splData.pointer !== null) splEnvironment.memory[splData.pointer - 1] = returnValue;
         }
         debugStream.log("<success; " + splData.constructor.name);
-    }
+    },
+    /**
+     * @param {SplEnvironment} splEnvironment
+     */
+    closeEnvironment(splEnvironment) {
+        splEnvironment.spellbooks.forEach(s => s.close())
+    },
 }
 debugStream.silent = true;
 const fsPromises = require("fs").promises;
 (async () => {
     try {
-        const data = await fsPromises.readFile("docs\\tests\\quiz.spl", "utf8");
-        await new SpellScript(data).evaluate(testEnviroment);
+        // const data = await fsPromises.readFile("docs\\examples\\simple.spl", "utf8");
+        const data = await fsPromises.readFile("docs\\tests\\if.spl", "utf8");
+        // await new SpellScript(data).evaluate(testEnviroment);
 
-        // console.log(utils.subCompile(data));
+        console.log(utils.subCompile(data));
         // utils.deepLog(testEnviroment.memory);
 
-        testEnviroment.spellbooks[0].close();
-        testEnviroment.spellbooks[1].close();
+        utils.closeEnvironment(testEnviroment)
     } catch (err) {
         console.error("error occurred:", err);
     }
     return;
 })();
-
-// (async () => {
-//     try {
-//         const data = await fsPromises.readFile("docs\\tests\\if.spl", "utf8");
-//         // await new SpellScript(data).evaluate(testEnviroment);
-
-//         console.log(utils.subCompile(data));
-
-//         testEnviroment.spellbooks[0].close();
-//         testEnviroment.spellbooks[1].close();
-//     } catch (err) {
-//         console.error("error occurred:", err);
-//     }
-//     return;
-// })();
-
 return;
