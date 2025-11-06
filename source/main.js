@@ -422,15 +422,15 @@ const utils = {
         splEnvironment.spellbooks.forEach(s => s.close())
     },
 }
-debugStream.silent = true;
+debugStream.silent = false;
 const fsPromises = require("fs").promises;
 (async () => {
     try {
-        // const data = await fsPromises.readFile("docs\\examples\\simple.spl", "utf8");
-        const data = await fsPromises.readFile("docs\\tests\\if.spl", "utf8");
-        // await new SpellScript(data).evaluate(testEnviroment);
+        const data = await fsPromises.readFile("docs\\examples\\simple.spl", "utf8");
+        // const data = await fsPromises.readFile("docs\\tests\\if.spl", "utf8");
+        await new SpellScript(data).evaluate(testEnviroment);
 
-        console.log(utils.subCompile(data));
+        // console.log(utils.subCompile(data));
         // utils.deepLog(testEnviroment.memory);
 
         utils.closeEnvironment(testEnviroment)
