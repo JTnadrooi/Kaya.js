@@ -84,7 +84,7 @@ class TaskData extends SplEvaluable { // like a "function" but this sounds way b
         const callNameMatchRegex = /^.*\(/;
         const argsStringMatchRegex = /\(.*\)$/;
 
-        debugStream.log("casting subcompiled spl.TaskData from \"" + (str.length > 50 ? "[TO_LONG_STRING]" : str) + "\"..");
+        debugStream.log("casting subcompiled spl.TaskData from \"" + (str.length > 50 ? "[TOO_LONG_STRING]" : str) + "\"..");
 
         debugStream.log("getting headerLine and subvariables..");
         let headerLine = str.substring(0, str.indexOf("\n") === -1 ? undefined : str.indexOf("\n"));
@@ -331,7 +331,7 @@ const utils = {
         const numericRegex = /\*+(?!\d)/g; // matches all direct numerics directly after the * symbol. // including the *, does not return ALL *'s.
 
         let subcompiled = str;
-        debugStream.log("subcompiling string: \"" + (str.length > 50 ? "[TO_LONG_STRING]" : str) + "\"..");
+        debugStream.log("subcompiling string: \"" + (str.length > 50 ? "[TOO_LONG_STRING]" : str) + "\"..");
         if (this.isSubCompiled(str)) {
             debugStream.log("str already subcompiled.");
             if (guarantee) {
